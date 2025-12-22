@@ -1,0 +1,35 @@
+2025-11-24 23:46:36,677 INFO 开始爬取 MedlinePlus
+2025-11-24 23:46:37,247 INFO MedlinePlus 条目链接数=0
+2025-11-24 23:46:37,247 INFO MedlinePlus 获取 0 条
+2025-11-24 23:46:37,247 INFO 开始爬取 NHS.uk
+2025-11-24 23:46:38,179 INFO NHS.uk 条目链接数=814
+2025-11-25 00:07:14,756 INFO NHS.uk 获取 814 条
+2025-11-25 00:07:14,757 INFO 开始爬取 ICD10Data
+2025-11-25 00:07:16,255 INFO ICD10Data 类别链接数=0
+2025-11-25 00:07:16,256 INFO ICD10Data 获取 0 条
+2025-11-25 00:13:54,395 INFO 开始爬取 MedlinePlus
+2025-11-25 00:13:55,794 INFO MedlinePlus 条目链接数=0
+2025-11-25 00:13:55,794 INFO MedlinePlus 获取 0 条
+2025-11-25 00:13:55,794 INFO 开始爬取 NHS.uk
+2025-11-25 00:13:57,266 INFO NHS.uk 条目链接数=814
+2025-11-25 00:21:20,576 WARNING Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='www.nhs.uk', port=443): Read timed out. (read timeout=20.0)")': /conditions/heart-failure/
+2025-11-25 00:25:55,851 INFO 开始爬取 MedlinePlus
+2025-11-25 00:25:56,716 INFO MedlinePlus 条目链接数=0
+2025-11-25 00:25:56,716 INFO MedlinePlus 获取 0 条
+2025-11-25 00:25:56,716 INFO 开始爬取 NHS.uk
+2025-11-25 00:25:58,202 INFO NHS.uk 条目链接数=814
+2025-11-25 00:43:45,831 INFO 开始爬取 MedlinePlus
+2025-11-25 00:43:46,545 INFO MedlinePlus 条目链接数=0
+2025-11-25 00:43:46,545 INFO MedlinePlus 获取 0 条
+2025-11-25 00:43:46,546 INFO 开始爬取 NHS.uk
+2025-11-25 00:43:47,838 INFO NHS.uk 条目链接数=814
+2025-11-25 00:55:39,051 INFO NHS.uk 获取 814 条
+2025-11-25 00:55:39,051 INFO 开始爬取 ICD10Data
+2025-11-25 00:55:40,275 INFO ICD10Data 类别链接数=0
+2025-11-25 00:55:40,275 INFO ICD10Data 获取 0 条
+2025-11-25 00:56:42,270 INFO NHS.uk 条目链接数=814
+2025-11-25 00:57:27,975 INFO 写入JSON: output/diseases.json, 记录数=50
+2025-11-25 00:57:48,211 INFO NHS.uk 条目链接数=643
+2025-11-25 00:58:32,490 INFO 写入JSON: output/diseases.json, 记录数=50
+2025-11-25 01:00:36,168 WARNING Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='www.icd10data.com', port=443): Read timed out. (read timeout=20.0)")': /search?s=Febrile%20seizures
+2025-11-25 01:02:03,237 WARNING Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='www.icd10data.com', port=443): Read timed out. (read timeout=20.0)")': /search?s=Henoch-Sch%C3%B6nlein%20purpura%20(HSP)

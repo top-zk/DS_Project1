@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS diseases (
+    id VARCHAR(64) PRIMARY KEY,
+    疾病名称 VARCHAR(255) NOT NULL,
+    疾病编码 VARCHAR(64) NOT NULL,
+    主要症状 JSON,
+    症状描述 TEXT NOT NULL,
+    症状类型 VARCHAR(64) NOT NULL,
+    概率权重 DOUBLE NOT NULL,
+    紧急程度 VARCHAR(32) NOT NULL,
+    来源链接 TEXT NOT NULL,
+    爬取时间戳 DATETIME NOT NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

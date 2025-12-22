@@ -1,0 +1,38 @@
+{
+  "疾病名称": "Pneumonia",
+  "来源": "https://medlineplus.gov/pneumonia.html",
+  "摘要": "Pneumonia is an infection in one or both of your lungs. It causes the air sacs of your lungs to fill up with fluid or pus. Pneumonia can range from mild to severe, depending on what caused it, your age, and your overall health.",
+  "主要症状": [
+    "Fever",
+    "Chills",
+    "Cough, usually with phlegm (a type of thick mucus made in your lungs)",
+    "Shortness of breath",
+    "Chest painwhen you breathe or cough",
+    "Nausea and/or vomiting",
+    "Diarrhea"
+  ],
+  "次要症状": [
+    "lack of energy",
+    "restlessness",
+    "lower-than-normal temperature",
+    "confusion",
+    "weakness"
+  ],
+  "检查指标": [
+    "Will take your medical history, which includes asking about your symptoms",
+    "Will do a physical exam, which includes listening to your lungs with a stethoscope",
+    "May order various tests, such as:",
+    "A chestx-ray",
+    "Blood tests such as acomplete blood count(CBC) to see if your immune system is actively fighting an infection",
+    "Ablood cultureto find out whether you have a bacterial infection that has spread to your bloodstream"
+  ],
+  "诊断标准": "主要症状≥2项 + 检查指标异常",
+  "鉴别诊断": [
+    "COVID-19 (Coronavirus Disease 2019)",
+    "Haemophilus Infections",
+    "Legionnaires' Disease",
+    "Lung Diseases",
+    "Pneumococcal Infections",
+    "Pneumocystis Infections"
+  ]
+}
