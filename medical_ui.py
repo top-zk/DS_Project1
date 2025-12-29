@@ -28,7 +28,7 @@ def load_model_and_tokenizer():
     global tokenizer, model
     if tokenizer is not None and model is not None:
         return
-    src = './disease_model' if os.path.isdir('./disease_model') else MODEL_PATH
+    src = './best_disease_model' if os.path.isdir('./best_disease_model') else MODEL_PATH
     try:
         tokenizer = BertTokenizer.from_pretrained(src)
     except Exception:
