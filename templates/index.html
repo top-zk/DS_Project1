@@ -1,103 +1,493 @@
 <!doctype html>
 <html lang="zh">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>医疗问答系统</title>
-  <style>
-    :root{--bg:#0f172a;--card:#111827;--muted:#94a3b8;--text:#e5e7eb;--primary:#3b82f6;--primary-600:#2563eb;--border:#1f2937;--accent:#22c55e}
-    *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans",sans-serif}
-    .container{max-width:980px;margin:0 auto;padding:28px 16px}
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-    .brand{font-weight:700;letter-spacing:.2px;font-size:18px}
-    .badge{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.3);padding:4px 8px;border-radius:999px;font-size:12px}
-    .hero{padding:18px 0 8px}
-    .title{font-size:28px;margin:0 0 8px}
-    .subtitle{color:var(--muted);margin:0 0 18px}
-    .card{background:linear-gradient(180deg,rgba(17,24,39,.8),rgba(17,24,39,.6));border:1px solid var(--border);border-radius:14px;padding:16px}
-    form{display:flex;flex-direction:column;gap:12px}
-    label{font-size:13px;color:var(--muted)}
-    textarea{width:100%;min-height:140px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:#0b1220;color:var(--text);font-size:14px;outline:none}
-    textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,130,246,.18)}
-    .actions{display:flex;gap:12px;align-items:center}
-    .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:14px;cursor:pointer}
-    .btn:hover{background:var(--primary-600)}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    .muted{color:var(--muted)}
-    .mono{font-family:ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-    .section{margin-top:16px}
-    .bar{height:10px;background:#0b1220;border:1px solid var(--border);border-radius:999px;overflow:hidden}
-    .bar>div{height:100%;background:linear-gradient(90deg,var(--primary),#8b5cf6);}
-    .row{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
-    .pill{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#0b1220}
-    .footer{margin:24px 0;color:var(--muted);font-size:13px}
-    @media (max-width:720px){.grid{grid-template-columns:1fr}}
-  </style>
-  <meta name="referrer" content="no-referrer">
-  <meta name="color-scheme" content="dark">
-  <link rel="icon" href="data:,">
-  <meta name="theme-color" content="#0f172a">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>智能医疗诊断助手</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome (Optional for icons) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --medical-blue: #007bff; /* Medical Blue */
+            --medical-light: #e7f1ff;
+            --bg-color: #f8f9fa;
+            --text-dark: #343a40;
+            --text-muted: #6c757d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            color: var(--text-dark);
+        }
+
+        /* Navbar Styling */
+        :root {
+            --navbar-height: 80px;
+        }
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            height: var(--navbar-height);
+            z-index: 1050; /* Higher than offcanvas */
+        }
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--medical-blue) !important;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 2.4rem; 
+        }
+        .navbar-brand i {
+            font-size: 2.8rem; 
+        }
+        
+        /* Offcanvas Sidebar */
+        .offcanvas {
+            width: 300px;
+            top: var(--navbar-height) !important; /* Start below navbar */
+            height: calc(100vh - var(--navbar-height)) !important;
+            z-index: 1045;
+        }
+        .offcanvas-backdrop {
+            top: var(--navbar-height) !important; /* Start below navbar */
+            height: calc(100vh - var(--navbar-height)) !important;
+            z-index: 1040;
+        }
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            background: #ffffff;
+            margin-bottom: 24px;
+            transition: transform 0.2s;
+        }
+        
+        /* Input Section */
+        textarea.form-control {
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 1rem;
+            resize: vertical;
+            background-color: #fbfbfb;
+            transition: all 0.3s;
+        }
+        textarea.form-control:focus {
+            background-color: #ffffff;
+            border-color: var(--medical-blue);
+            box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+        }
+
+        /* Buttons */
+        .btn-medical {
+            background-color: var(--medical-blue);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 32px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .btn-medical:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+        }
+
+        /* Result Section */
+        .result-header {
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+        .result-title {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .result-value {
+            color: var(--medical-blue);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .confidence-badge {
+            background-color: var(--medical-light);
+            color: var(--medical-blue);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        /* Progress Bars */
+        .progress-label {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            margin-bottom: 16px;
+        }
+        .progress-bar {
+            background-color: var(--medical-blue);
+            border-radius: 4px;
+        }
+        
+        /* Low probability items */
+        .low-prob-container {
+            margin-top: 20px;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 16px;
+        }
+        .low-prob-toggle {
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .low-prob-toggle:hover {
+            color: var(--medical-blue);
+        }
+        .low-prob-item {
+            opacity: 0.7;
+        }
+        .low-prob-item .progress-bar {
+            background-color: #adb5bd;
+        }
+        /* Removed old Offcanvas styles that might conflict, though we overwrote .offcanvas above. 
+           Keeping history styles */
+        .history-item {
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+        .history-item:hover {
+            background-color: #f8f9fa;
+        }
+        .history-date {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .history-text {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #343a40;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="nav">
-      <div class="brand">医疗问答系统</div>
-      <div class="badge">诊断演示</div>
-    </div>
 
-    <div class="hero">
-      <h1 class="title">输入症状立即诊断</h1>
-      <p class="subtitle">根据训练模型推断可能的疾病类型与就诊科室，仅作参考。</p>
-    </div>
-
-    <div class="card">
-      <form action="/predict" method="post">
-        <label for="symptoms">症状描述</label>
-        <textarea id="symptoms" name="symptoms" placeholder="例如：咳嗽、发热、胸闷、气短"></textarea>
-        <div class="actions">
-          <button class="btn" type="submit">诊断</button>
-          <span class="pill">支持中文输入</span>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-heartbeat"></i>
+                智能医疗诊断助手
+            </a>
         </div>
-      </form>
+    </nav>
+
+    <!-- History Drawer -->
+    <div class="offcanvas offcanvas-start" data-bs-scroll="true" data-bs-backdrop="true" tabindex="-1" id="historyDrawer" aria-labelledby="historyDrawerLabel">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title fw-bold" id="historyDrawerLabel">
+                <i class="fas fa-history me-2 text-muted"></i>问诊记录
+            </h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+            <div class="p-3 border-bottom">
+                <button class="btn btn-outline-primary w-100 rounded-pill" onclick="startNewConsultation()">
+                    <i class="fas fa-plus me-2"></i>新的一轮问诊
+                </button>
+            </div>
+            <div id="history-list" class="flex-grow-1 overflow-auto">
+                <!-- History items will be populated here -->
+                <div class="text-center text-muted mt-5 small">暂无历史记录</div>
+            </div>
+        </div>
     </div>
 
+    <!-- Hamburger Button Container -->
+    <div class="container-fluid px-4" style="margin-top: 100px;">
+        <button class="btn btn-link text-decoration-none p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#historyDrawer" aria-controls="historyDrawer">
+            <i class="fas fa-bars fa-2x text-dark"></i>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container" style="margin-top: 20px; max-width: 800px; position: relative;">
+        
+        <!-- Intro Text -->
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-dark mb-2">您的AI健康顾问</h2>
+            <p class="text-muted">请描述您的症状，我们将为您分析可能的疾病类型并推荐就诊科室。</p>
+        </div>
+
+        <!-- Input Card -->
+        <div class="card p-4">
+            <form action="/predict" method="post">
+                <div class="mb-4">
+                    <label for="symptoms" class="form-label fw-bold text-secondary">症状描述</label>
+                    <textarea 
+                        class="form-control" 
+                        id="symptoms" 
+                        name="symptoms" 
+                        rows="5" 
+                        placeholder="请详细描述您的症状，例如：最近两天持续发热，伴有咳嗽和胸痛，呼吸有点困难..."
+                        required>{% if result %}{{ result.text }}{% endif %}</textarea>
+                </div>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button class="btn btn-medical" type="submit">
+                        <i class="fas fa-stethoscope me-2"></i>立即诊断
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {% if result %}
+        <!-- Result Card -->
+        <div class="card p-4 animate__animated animate__fadeIn">
+            <div class="result-header">
+                <div class="row">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="result-title">最可能的疾病类型</div>
+                        <div class="result-value">
+                            {{ result.type_name }}
+                        </div>
+                        <div class="confidence-badge">
+                            置信度 {{ (result.prob * 100) | round(2) }}%
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="result-title">推荐就诊科室</div>
+                        <div class="result-value text-success">
+                            <i class="fas fa-user-md me-2"></i>{{ result.department }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Probability Distribution Chart -->
+            <div>
+                <h6 class="fw-bold mb-3 text-secondary">疾病类型概率分析</h6>
+                <div id="chart-container">
+                    <!-- JS will render this -->
+                </div>
+                
+                <div class="low-prob-container">
+                    <a class="low-prob-toggle" data-bs-toggle="collapse" href="#lowProbDetails" role="button" aria-expanded="false" aria-controls="lowProbDetails">
+                        <span>显示其他可能性 (低概率)</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="collapse mt-3" id="lowProbDetails">
+                        <div id="low-prob-list">
+                            <!-- JS will render this -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Footer -->
+    <div class="fixed-bottom text-center text-muted mb-4 small">
+        <p class="mb-0">
+            <i class="fas fa-info-circle me-1"></i>
+            免责声明：本系统基于人工智能模型开发，诊断结果仅供参考，不能替代专业医生的诊断。
+            <br>如有严重不适，请立即前往医院就诊。
+        </p>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Logic for Chart -->
     {% if result %}
-    <div class="section card">
-      <div class="grid">
-        <div>
-          <div class="muted">可能疾病类型</div>
-          <div style="margin-top:4px"><strong>{{ result.type_name }}</strong>（编码 {{ result.type_id }}）</div>
-        </div>
-        <div>
-          <div class="muted">推荐就诊科室</div>
-          <div style="margin-top:4px"><strong>{{ result.department }}</strong></div>
-        </div>
-      </div>
-      <div class="section">
-        <div class="muted">诊断概率</div>
-        <div class="mono" style="margin-top:4px">{{ '%.4f'|format(result.prob) }}</div>
-      </div>
-      <div class="section">
-        <div class="muted">原始输入</div>
-        <div style="margin-top:4px">{{ result.text }}</div>
-      </div>
-      <div class="section">
-        <div class="muted">类别概率分布</div>
-        <div style="margin-top:6px">
-          {% for k,v in types.items() %}
-          <div class="row">
-            <div>{{ v }}</div>
-            <div class="mono">{{ ('%.2f'|format(result.probs[k]*100)) }}%</div>
-          </div>
-          <div class="bar"><div style="width: {{ (result.probs[k]*100)|round(2) }}%"></div></div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
+    <script id="data-probs" type="application/json">
+        {{ result.probs | tojson | safe }}
+    </script>
+    <script id="data-types" type="application/json">
+        {{ types | tojson | safe }}
+    </script>
+    <script id="data-result" type="application/json">
+        {{ result | tojson | safe }}
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Save current result to history if exists
+            const currentResult = JSON.parse(document.getElementById('data-result').textContent);
+            if (currentResult) {
+                saveToHistory(currentResult);
+            }
+
+            const probs = JSON.parse(document.getElementById('data-probs').textContent);
+            const types = JSON.parse(document.getElementById('data-types').textContent);
+            
+            // Convert to array of objects for sorting
+            let data = [];
+            for (let i = 0; i < probs.length; i++) {
+                // Ensure key is string for lookup if types is object with string keys, or number
+                // Flask tojson on dict with int keys might produce string keys in JSON
+                let typeName = types[i] || types[String(i)] || "未知";
+                data.push({
+                    id: i,
+                    name: typeName,
+                    prob: probs[i] * 100
+                });
+            }
+            
+            // Sort descending
+            data.sort((a, b) => b.prob - a.prob);
+            
+            const top3 = data.slice(0, 3);
+            const others = data.slice(3);
+            
+            const chartContainer = document.getElementById('chart-container');
+            const lowProbContainer = document.getElementById('low-prob-list');
+            
+            // Render Top 3
+            top3.forEach(item => {
+                const html = `
+                    <div class="mb-3">
+                        <div class="progress-label">
+                            <span class="fw-bold">${item.name}</span>
+                            <span class="fw-bold">${item.prob.toFixed(2)}%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: ${item.prob}%" aria-valuenow="${item.prob}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                `;
+                chartContainer.innerHTML += html;
+            });
+            
+            // Render Others
+            others.forEach(item => {
+                const html = `
+                    <div class="mb-2 low-prob-item">
+                        <div class="progress-label">
+                            <span>${item.name}</span>
+                            <span>${item.prob.toFixed(2)}%</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-secondary" role="progressbar" style="width: ${item.prob}%" aria-valuenow="${item.prob}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                `;
+                lowProbContainer.innerHTML += html;
+            });
+        });
+    </script>
     {% endif %}
 
-    <div class="footer">结果仅供参考，请结合专业医生诊断。</div>
-  </div>
+    <!-- History Management Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', loadHistory);
+
+        function saveToHistory(result) {
+            let history = JSON.parse(localStorage.getItem('medical_history') || '[]');
+            
+            // Check if duplicate (same text and type) to avoid saving on refresh
+            const isDuplicate = history.some(item => item.text === result.text && item.type_name === result.type_name);
+            if (isDuplicate) return;
+
+            const newItem = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleString(),
+                text: result.text,
+                type_name: result.type_name,
+                full_result: result // Store full result to restore if needed (though we currently rely on text re-submission or just showing stored data could be better but let's stick to simple restore text for now or full restore logic?)
+                // Actually, simply clicking history item should probably fill the text and maybe re-submit or show saved result.
+                // For simplicity and "New Consultation" logic, let's assume clicking item fills the text box.
+                // To fully restore the "result view", we'd need to modify the DOM or re-submit.
+                // Re-submitting is easiest to ensure consistency.
+            };
+
+            history.unshift(newItem); // Add to top
+            if (history.length > 50) history.pop(); // Limit to 50 items
+            localStorage.setItem('medical_history', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('medical_history') || '[]');
+            const container = document.getElementById('history-list');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted mt-5 small">暂无历史记录</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.onclick = () => restoreHistory(item);
+                div.innerHTML = `
+                    <div class="history-text fw-bold">${item.text}</div>
+                    <div class="history-date text-muted d-flex justify-content-between">
+                        <span>${item.type_name}</span>
+                        <span>${item.timestamp.split(' ')[0]}</span>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function restoreHistory(item) {
+            // Restore text to textarea
+            const textarea = document.getElementById('symptoms');
+            if (textarea) {
+                textarea.value = item.text;
+                // Close sidebar
+                const bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('historyDrawer'));
+                if (bsOffcanvas) bsOffcanvas.hide();
+                
+                // Optional: Auto-submit to see result immediately
+                // document.querySelector('form').submit();
+                // Or just let user click diagnose. Let's just focus input.
+                textarea.focus();
+            }
+        }
+
+        function startNewConsultation() {
+            // Clear textarea
+            const textarea = document.getElementById('symptoms');
+            if (textarea) textarea.value = '';
+            
+            // Remove result card if exists (client-side visual clear)
+            const resultCard = document.querySelector('.animate__fadeIn');
+            if (resultCard) resultCard.remove();
+            
+            // Close sidebar
+            const bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('historyDrawer'));
+            if (bsOffcanvas) bsOffcanvas.hide();
+
+            // Clear URL params/clean state if needed, or just redirect to home
+            window.location.href = '/';
+        }
+    </script>
 </body>
 </html>
