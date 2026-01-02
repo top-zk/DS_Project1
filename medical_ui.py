@@ -1,10 +1,12 @@
 import os
 import torch
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session, redirect, url_for, flash
 from transformers import BertTokenizer, BertForSequenceClassification
 from medical_config import DEVICE, MODEL_PATH, DISEASE_SYMPTOM_TYPES
+from models import init_db, add_user, verify_user
 
 app = Flask(__name__)
+app.secret_key = 'super_secret_key_for_medical_ai_app'
 
 tokenizer = None
 model = None
@@ -80,14 +82,78 @@ def diagnose(text):
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html', result=None, types=DISEASE_SYMPTOM_TYPES)
+    return render_template('home.html')
+
+@app.route('/diagnose', methods=['GET'])
+def diagnose_page():
+    return render_template('diagnose.html', result=None, types=DISEASE_SYMPTOM_TYPES)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = verify_user(email, password)
+        if user:
+            session['user_id'] = user['id']
+            session['user_name'] = user['first_name'] or user['email']
+            flash('登录成功！', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('邮箱或密码错误', 'danger')
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    print(f"Register route accessed. Method: {request.method}")
+    if request.method == 'POST':
+        print("Processing registration form data...")
+        email = request.form.get('email')
+        password = request.form.get('password')
+        password_confirm = request.form.get('password_confirm')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        
+        print(f"Registering user: {email}, {first_name} {last_name}")
+
+        if password != password_confirm:
+            print("Password mismatch")
+            flash('两次输入的密码不一致', 'danger')
+            return render_template('register.html')
+        
+        try:
+            if add_user(email, password, first_name, last_name):
+                print("User added successfully")
+                flash('注册成功，请登录', 'success')
+                return redirect(url_for('login'))
+            else:
+                print("User add failed (email likely exists)")
+                flash('注册失败，该邮箱可能已被注册', 'danger')
+        except Exception as e:
+            print(f"Exception during add_user: {e}")
+            flash(f'注册发生错误: {str(e)}', 'danger')
+            
+    return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('您已退出登录', 'info')
+    return redirect(url_for('index'))
 
 @app.route('/predict', methods=['POST'])
 def predict():
     symptoms = request.form.get('symptoms', '').strip()
     result = diagnose(symptoms) if symptoms else None
-    return render_template('index.html', result=result, types=DISEASE_SYMPTOM_TYPES)
+    return render_template('diagnose.html', result=result, types=DISEASE_SYMPTOM_TYPES)
 
 if __name__ == '__main__':
+    try:
+        init_db()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+    
     load_model_and_tokenizer()
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    print("Model loaded. Starting server...")
+    app.run(host='0.0.0.0', port=5000, debug=True)

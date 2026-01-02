@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}注册 - 智能医疗诊断助手{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg border-0 rounded-lg mt-5">
+                <div class="card-header bg-white border-0 text-center pt-4">
+                    <h3 class="font-weight-light my-2">创建账号</h3>
+                    <p class="text-muted small">注册以使用更多功能</p>
+                </div>
+                <div class="card-body px-5 py-4">
+                    <form id="registerForm" method="post" action="{{ url_for('register') }}">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3 mb-md-0">
+                                    <input class="form-control" id="inputFirstName" name="first_name" type="text" placeholder="Enter your first name" />
+                                    <label for="inputFirstName">姓氏</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input class="form-control" id="inputLastName" name="last_name" type="text" placeholder="Enter your last name" />
+                                    <label for="inputLastName">名字</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="inputEmail" name="email" type="email" placeholder="name@example.com" required />
+                            <label for="inputEmail">邮箱地址</label>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3 mb-md-0">
+                                    <input class="form-control" id="inputPassword" name="password" type="password" placeholder="Create a password" required />
+                                    <label for="inputPassword">密码</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating mb-3 mb-md-0">
+                                    <input class="form-control" id="inputPasswordConfirm" name="password_confirm" type="password" placeholder="Confirm password" required />
+                                    <label for="inputPasswordConfirm">确认密码</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2 mt-4 mb-3">
+                            <button id="registerBtn" class="btn btn-medical btn-lg" type="button">注册账号</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3 bg-light border-0 rounded-bottom">
+                    <div class="small"><a href="{{ url_for('login') }}" class="text-decoration-none">已有账号? 直接登录</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('registerBtn');
+        const form = document.getElementById('registerForm');
+        
+        btn.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent default just in case
+            console.log("Register button clicked");
+            
+            // Check HTML5 validation
+            if (form.checkValidity()) {
+                console.log("Form is valid, submitting...");
+                form.submit();
+            } else {
+                console.log("Form is invalid");
+                form.reportValidity(); // Show validation errors to user
+            }
+        });
+
+        // Also allow Enter key to submit
+        form.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btn.click();
+            }
+        });
+    });
+</script>
+{% endblock %}

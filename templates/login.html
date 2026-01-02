@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - 智能医疗诊断助手{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-lg border-0 rounded-lg mt-5">
+                <div class="card-header bg-white border-0 text-center pt-4">
+                    <h3 class="font-weight-light my-2">欢迎回来</h3>
+                    <p class="text-muted small">请登录您的账号</p>
+                </div>
+                <div class="card-body px-5 py-4">
+                    <form method="post">
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="inputEmail" name="email" type="email" placeholder="name@example.com" required />
+                            <label for="inputEmail">邮箱地址</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="inputPassword" name="password" type="password" placeholder="Password" required />
+                            <label for="inputPassword">密码</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" id="inputRememberPassword" type="checkbox" value="" />
+                            <label class="form-check-label" for="inputRememberPassword">记住我</label>
+                        </div>
+                        <div class="d-grid gap-2 mt-4 mb-3">
+                            <button class="btn btn-medical btn-lg" type="submit">登录</button>
+                        </div>
+                        <div class="text-center">
+                            <a class="small text-decoration-none" href="#">忘记密码?</a>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3 bg-light border-0 rounded-bottom">
+                    <div class="small"><a href="{{ url_for('register') }}" class="text-decoration-none">还没有账号? 立即注册!</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
