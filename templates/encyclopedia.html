@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}医疗知识库 - 智能医疗诊断助手{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8 offset-md-2">
+            <h2 class="text-center mb-4 text-primary"><i class="fas fa-book-medical me-2"></i>医疗知识库</h2>
+            
+            <!-- Search -->
+            <form action="{{ url_for('encyclopedia') }}" method="get" class="d-flex mb-4">
+                <input class="form-control me-2" type="search" name="q" placeholder="搜索疾病名称或症状..." value="{{ query if query else '' }}">
+                <button class="btn btn-medical" type="submit">搜索</button>
+                {% if query %}
+                <a href="{{ url_for('encyclopedia') }}" class="btn btn-outline-secondary ms-2">清除</a>
+                {% endif %}
+            </form>
+
+            <!-- A-Z Nav -->
+            {% if not query %}
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                {% for l in letters %}
+                <a href="{{ url_for('encyclopedia', letter=l) }}" class="btn btn-sm {% if l == current_letter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    {{ l }}
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            {% if articles %}
+                <div class="list-group shadow-sm">
+                {% for article in articles %}
+                    <a href="{{ url_for('encyclopedia_detail', article_id=article['id']) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3">
+                        <div>
+                            <h5 class="mb-1 text-primary fw-bold">{{ article['title'] }}</h5>
+                            <small class="text-muted">{{ article['symptoms'][:80] }}...</small>
+                        </div>
+                        <i class="fas fa-chevron-right text-muted"></i>
+                    </a>
+                {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3 opacity-50"></i>
+                    <p class="text-muted">未找到相关疾病信息。</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

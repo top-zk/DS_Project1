@@ -3,7 +3,7 @@ import torch
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from transformers import BertTokenizer, BertForSequenceClassification
 from medical_config import DEVICE, MODEL_PATH, DISEASE_SYMPTOM_TYPES
-from models import init_db, add_user, verify_user
+from models import init_db, add_user, verify_user, get_encyclopedia_letters, get_articles_by_letter, search_articles, get_article_by_id
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_medical_ai_app'
@@ -141,9 +141,47 @@ def logout():
     flash('您已退出登录', 'info')
     return redirect(url_for('index'))
 
+@app.route('/encyclopedia')
+def encyclopedia():
+    letter = request.args.get('letter', 'A')
+    query = request.args.get('q')
+    
+    letters = get_encyclopedia_letters()
+    
+    if query:
+        articles = search_articles(query)
+        current_letter = None
+    else:
+        # If letters list is not empty and letter is not in it (and not default A), fallback?
+        # For now just trust the query or DB.
+        articles = get_articles_by_letter(letter)
+        current_letter = letter
+        
+    return render_template('encyclopedia.html', 
+                           letters=letters, 
+                           articles=articles, 
+                           current_letter=current_letter,
+                           query=query)
+
+@app.route('/encyclopedia/<int:article_id>')
+def encyclopedia_detail(article_id):
+    article = get_article_by_id(article_id)
+    if not article:
+        flash('未找到相关文章', 'warning')
+        return redirect(url_for('encyclopedia'))
+    return render_template('encyclopedia_detail.html', article=article)
+
 @app.route('/predict', methods=['POST'])
 def predict():
     symptoms = request.form.get('symptoms', '').strip()
+    
+    # Task 2: Input Validation
+    # Requirement: At least 3 descriptive words or > 10 chars.
+    if len(symptoms) < 10:
+        flash('描述过于简单，请至少提供3个相关的症状描述（或输入10个字以上）', 'warning')
+        # Return to page with previous input preserved
+        return render_template('diagnose.html', result=None, types=DISEASE_SYMPTOM_TYPES, symptoms_input=symptoms)
+        
     result = diagnose(symptoms) if symptoms else None
     return render_template('diagnose.html', result=result, types=DISEASE_SYMPTOM_TYPES)
 

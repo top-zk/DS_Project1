@@ -1,6 +1,6 @@
 # 医疗疾病诊断与数据采集系统 (Medical Disease Diagnosis & Data Collection System)
 
-这是一个综合性的医疗数据科学项目，集成了多源医疗数据爬虫、基于BERT的疾病症状诊断模型以及可视化的Web交互界面。该系统旨在通过自动化手段收集高质量医疗数据，并利用深度学习技术提供智能化的疾病分诊建议。
+这是一个综合性的医疗数据科学项目，集成了多源医疗数据爬虫、基于BERT的疾病症状诊断模型以及可视化的Web交互界面。该系统旨在通过自动化手段收集高质量医疗数据，并利用深度学习技术提供智能化的疾病分诊建议，同时提供丰富的医疗百科知识库。
 
 ## 🌟 核心功能 (Key Features)
 
@@ -12,17 +12,24 @@
 2.  **智能疾病诊断 (Intelligent Diagnosis)**
     *   基于 **BERT (bert-base-chinese)** 预训练模型进行微调。
     *   能够根据用户输入的自然语言症状描述（如“头痛伴有恶心”），自动识别疾病类型。
+    *   **智能校验**：前端与后端双重校验，确保输入的症状描述足够详细（至少10字），以提高诊断准确率。
     *   提供疾病类型预测、置信度分析及推荐就诊科室。
 
-3.  **用户管理系统 (User Management)**
+3.  **医疗百科 (Medical Encyclopedia)**
+    *   **知识库构建**：基于爬取的数据自动构建本地医疗百科数据库 (SQLite)。
+    *   **A-Z 索引**：支持按疾病名称首字母（A-Z）快速浏览查找。
+    *   **全文搜索**：支持通过关键词搜索疾病名称或症状。
+    *   **详情展示**：提供疾病的详细介绍、症状描述等信息。
+
+4.  **用户管理系统 (User Management)**
     *   提供完整的用户注册与登录功能。
     *   基于 SQLite 数据库存储用户信息，保障数据安全。
     *   支持用户会话管理。
 
-4.  **Web 交互界面 (Web Interface)**
+5.  **Web 交互界面 (Web Interface)**
     *   基于 **Flask** 框架开发的轻量级Web应用。
     *   提供简洁的用户界面，支持症状输入与一键诊断。
-    *   **历史记录功能**：本地存储用户的问诊历史，方便快速回溯。
+    *   **历史记录功能**：本地存储用户的问诊历史，支持侧边栏快速查看与回填。
     *   实时展示诊断结果、概率分布及就诊建议。
 
 ## 📂 项目结构 (Project Structure)
@@ -41,14 +48,16 @@ DS_Project1/
 ├── templates/              # Web应用模板
 │   ├── base.html           # 基础布局模板
 │   ├── home.html           # 首页
-│   ├── diagnose.html       # 诊断页面 (含历史记录)
+│   ├── diagnose.html       # 诊断页面 (含历史记录与输入校验)
+│   ├── encyclopedia.html   # 医疗百科首页 (搜索 & 索引)
+│   ├── encyclopedia_detail.html # 医疗百科详情页
 │   ├── login.html          # 登录页面
 │   └── register.html       # 注册页面
 ├── medical_train.py        # 模型训练脚本
 ├── medical_ui.py           # Web 应用启动脚本 (Flask入口)
 ├── medical_config.py       # 医疗模型相关配置
 ├── medical_data_loader.py  # 数据加载与预处理
-├── models.py               # 数据库模型与用户管理逻辑
+├── models.py               # 数据库模型 (用户 & 百科)
 ├── requirements.txt        # 项目依赖清单
 └── ...
 ```
@@ -70,7 +79,7 @@ pip install torch transformers flask numpy requests beautifulsoup4 pymongo sqlal
 项目默认使用 `bert-base-chinese`。如果本地没有模型文件，代码会自动尝试从 Hugging Face 下载，或者请手动将模型文件放入 `bert-base-chinese/` 目录。
 
 ### 4. 数据库初始化
-首次运行前，系统会自动初始化 SQLite 数据库 (`medical_app.db`) 用于存储用户信息。
+首次运行前，系统会自动初始化 SQLite 数据库 (`medical_app.db`)，用于存储用户信息和**医疗百科数据**（自动从爬虫生成的 JSON 文件导入）。
 
 ## 🚀 使用指南 (Usage Guide)
 
@@ -88,12 +97,18 @@ python medical_ui.py
 
 ### 3. 进行智能诊断
 *   在“智能诊断”页面，输入您的症状描述（例如：“最近胸痛，伴有呼吸困难”）。
+*   **注意**：为了保证诊断效果，请至少输入 **10个字** 的描述。
 *   点击“开始智能诊断”，系统将分析并返回：
     *   最可能的疾病类型及其置信度。
     *   推荐的就诊科室。
     *   详细的概率分布图表。
 
-### 4. 训练诊断模型 (开发者选项)
+### 4. 查阅医疗百科
+*   点击顶部导航栏的“医疗百科”。
+*   您可以直接在搜索框输入疾病名称，或点击下方的字母索引浏览疾病列表。
+*   点击具体疾病可查看详细信息。
+
+### 5. 训练诊断模型 (开发者选项)
 如果需要使用自己的数据重新训练模型：
 1.  准备数据：确保 `data/train_data.txt` 和 `data/val_data.txt` 存在且格式正确。
 2.  运行训练脚本：
@@ -102,7 +117,7 @@ python medical_ui.py
     ```
     训练完成后，最佳模型将保存为 `best_disease_model/` 或覆盖指定路径。
 
-### 5. 运行数据爬虫 (开发者选项)
+### 6. 运行数据爬虫 (开发者选项)
 如果需要抓取最新的医疗数据：
 ```bash
 cd huank/DB_project/crawler
@@ -113,7 +128,7 @@ python main.py
 
 *   **模型配置**: 修改 `medical_config.py` 可调整超参数（如 `EPOCHS`, `BATCH_SIZE`, `MAX_LEN`）及疾病标签映射。
 *   **爬虫配置**: 修改 `huank/DB_project/crawler/config.py` 可调整爬取策略及存储路径。
-*   **数据库配置**: 修改 `models.py` 可调整 SQLite 数据库文件路径。
+*   **数据库配置**: 修改 `models.py` 可调整 SQLite 数据库文件路径及百科数据导入逻辑。
 
 ## 💻 技术栈 (Tech Stack)
 
@@ -121,7 +136,7 @@ python main.py
 *   **深度学习**: PyTorch, Hugging Face Transformers (BERT)
 *   **Web 框架**: Flask, Jinja2, Bootstrap 5
 *   **数据采集**: Requests, BeautifulSoup, lxml
-*   **数据库**: MongoDB, MySQL (爬虫数据), SQLite (用户数据)
+*   **数据库**: MongoDB, MySQL (爬虫数据), SQLite (用户数据 & 百科知识库)
 
 ---
 *Generated for DS_Project1*

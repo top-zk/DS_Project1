@@ -41,7 +41,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 1.5rem; 
+            font-size: 2rem; 
         }
         .navbar-brand i {
             font-size: 1.8rem; 
@@ -107,14 +107,14 @@
             color: var(--medical-blue);
         }
 
-        {% block styles %}{% endblock %}
     </style>
+    {% block styles %}{% endblock %}
 </head>
 <body>
 
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
+        <div class="container-fluid px-4">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-heartbeat"></i>
                 智能医疗诊断助手
@@ -131,7 +131,7 @@
                         <a class="nav-link {% if request.endpoint == 'diagnose_page' %}active{% endif %}" href="{{ url_for('diagnose_page') }}">智能诊断</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">健康百科</a>
+                        <a class="nav-link {% if request.endpoint == 'encyclopedia' %}active{% endif %}" href="{{ url_for('encyclopedia') }}">医疗百科</a>
                     </li>
                     <li class="nav-item ms-2">
                         <a class="nav-link" href="{{ url_for('login') }}">登录</a>
@@ -148,7 +148,7 @@
     <div style="height: var(--navbar-height);"></div>
 
     <!-- Flash Messages -->
-    <div class="container mt-3">
+    <div class="container-fluid px-4 mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}

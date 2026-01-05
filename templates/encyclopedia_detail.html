@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article['title'] }} - 医疗知识库{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('encyclopedia') }}">医疗知识库</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ article['title'] }}</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow border-0 rounded-3">
+                <div class="card-body p-5">
+                    <h1 class="card-title mb-4 text-primary fw-bold">{{ article['title'] }}</h1>
+                    
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-dark border-bottom pb-2"><i class="fas fa-notes-medical me-2"></i>主要症状</h5>
+                        <p class="text-secondary">{{ article['symptoms'] }}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-success border-bottom pb-2"><i class="fas fa-file-medical-alt me-2"></i>解决方案与详细描述</h5>
+                        <div class="article-content text-dark" style="white-space: pre-wrap; line-height: 1.6;">{{ article['content'] }}</div>
+                    </div>
+                    
+                    <!-- Note: Recommended Department is explicitly excluded as per requirement -->
+                </div>
+                <div class="card-footer bg-white border-0 text-center pb-4">
+                     <a href="javascript:history.back()" class="btn btn-outline-secondary px-4">返回</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
