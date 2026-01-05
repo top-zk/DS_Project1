@@ -10,6 +10,10 @@ class DiseaseRecord(BaseModel):
     main_symptoms: List[str] = Field(default_factory=list, alias="主要症状")
     symptom_description: str = Field(..., alias="症状描述")
     symptom_type: str = Field(..., alias="症状类型")
+    causes: str = Field(default="", alias="病因")
+    treatment: str = Field(default="", alias="治疗方法")
+    prevention: str = Field(default="", alias="预防措施")
+    extended_info: Dict[str, Any] = Field(default_factory=dict, alias="扩展信息")
     probability_weight: float = Field(..., ge=0.0, le=1.0, alias="概率权重")
     urgency_level: str = Field(..., alias="紧急程度")
     source_url: str = Field(..., alias="来源链接")
@@ -32,6 +36,10 @@ class DiseaseRecord(BaseModel):
             "主要症状": self.main_symptoms,
             "症状描述": self.symptom_description,
             "症状类型": self.symptom_type,
+            "病因": self.causes,
+            "治疗方法": self.treatment,
+            "预防措施": self.prevention,
+            "扩展信息": self.extended_info,
             "概率权重": self.probability_weight,
             "紧急程度": self.urgency_level,
             "来源链接": self.source_url,

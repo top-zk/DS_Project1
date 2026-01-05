@@ -30,6 +30,17 @@ def iter_condition_links(session) -> Iterable[str]:
         yield url
 
 
+def extract_section_text(soup, keywords: List[str]) -> str:
+    text_content = []
+    for h in soup.find_all(["h2", "h3"]):
+        if any(k in h.get_text(strip=True).lower() for k in keywords):
+            curr = h.find_next_sibling()
+            while curr and curr.name not in ["h1", "h2", "h3", "section", "article"]:
+                text_content.append(curr.get_text(" ", strip=True))
+                curr = curr.find_next_sibling()
+            break
+    return " ".join(text_content).strip()
+
 def parse_condition(session, url: str) -> DiseaseRecord | None:
     try:
         r = session.get(url)
@@ -45,6 +56,11 @@ def parse_condition(session, url: str) -> DiseaseRecord | None:
                 if ul:
                     symptoms = [li.get_text(strip=True) for li in ul.find_all("li")]
                 break
+        
+        causes = extract_section_text(soup, ["causes", "why", "causes of"])
+        treatment = extract_section_text(soup, ["treatment", "treating", "how to treat"])
+        prevention = extract_section_text(soup, ["prevention", "preventing", "how to prevent"])
+
         symptom_type = classify_symptom_type(desc)
         urgency = detect_urgency(desc)
         weight = stable_weight_from_text(desc + name)
@@ -57,6 +73,9 @@ def parse_condition(session, url: str) -> DiseaseRecord | None:
             概率权重=weight,
             紧急程度=urgency,
             来源链接=url,
+            病因=causes,
+            治疗方法=treatment,
+            预防措施=prevention
         )
         return record
     except Exception as e:

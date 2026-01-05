@@ -2,11 +2,14 @@ import os
 import torch
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from transformers import BertTokenizer, BertForSequenceClassification
-from medical_config import DEVICE, MODEL_PATH, DISEASE_SYMPTOM_TYPES
-from models import init_db, add_user, verify_user, get_encyclopedia_letters, get_articles_by_letter, search_articles, get_article_by_id
+from medical_config import DEVICE, MODEL_PATH, DISEASE_SYMPTOM_TYPES, DISEASE_SYMPTOM_KEYWORDS
+from models import db, init_db, add_user, verify_user, get_encyclopedia_letters, get_articles_by_letter, search_articles, get_article_by_id
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_medical_ai_app'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///medical_app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 
 tokenizer = None
 model = None
@@ -69,6 +72,26 @@ def diagnose(text):
     with torch.no_grad():
         outputs = model(input_ids=input_ids, attention_mask=attention_mask)
     logits = outputs.logits
+    
+    # ---------------------------------------------------------
+    # Rule-based Adjustment (Keyword Matching)
+    # ---------------------------------------------------------
+    # Boost logits for categories where keywords appear in text
+    rule_boost = torch.zeros_like(logits)
+    found_keywords = False
+    
+    for type_id, keywords in DISEASE_SYMPTOM_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in text:
+                # Add significant boost if keyword found
+                # The boost value (e.g., 5.0) should be tuned. 
+                # Since BERT logits can vary, adding 5.0 is usually enough to sway the softmax significantly.
+                rule_boost[0, type_id] += 3.0 
+                found_keywords = True
+                
+    if found_keywords:
+        logits = logits + rule_boost
+        
     probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
     pred = int(torch.argmax(logits, dim=1).cpu().item())
     return {
@@ -175,19 +198,13 @@ def encyclopedia_detail(article_id):
 def predict():
     symptoms = request.form.get('symptoms', '').strip()
     
-    # Task 2: Input Validation
-    # Requirement: At least 3 descriptive words or > 10 chars.
-    if len(symptoms) < 10:
-        flash('描述过于简单，请至少提供3个相关的症状描述（或输入10个字以上）', 'warning')
-        # Return to page with previous input preserved
-        return render_template('diagnose.html', result=None, types=DISEASE_SYMPTOM_TYPES, symptoms_input=symptoms)
-        
     result = diagnose(symptoms) if symptoms else None
     return render_template('diagnose.html', result=result, types=DISEASE_SYMPTOM_TYPES)
 
 if __name__ == '__main__':
     try:
-        init_db()
+        with app.app_context():
+            init_db(app)
         print("Database initialized successfully.")
     except Exception as e:
         print(f"Error initializing database: {e}")

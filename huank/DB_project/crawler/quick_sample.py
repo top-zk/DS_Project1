@@ -43,5 +43,5 @@ def run(limit: int = 50) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(), ensure_ascii=False))
+    print(json.dumps(run(limit=5), ensure_ascii=False))
 

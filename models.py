@@ -1,54 +1,66 @@
-import sqlite3
-import os
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import os
+import json
+from pypinyin import pinyin, Style
 
-DB_NAME = "medical_app.db"
+db = SQLAlchemy()
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-def init_db():
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            first_name TEXT,
-            last_name TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
+class MedicalEncyclopedia(db.Model):
+    __tablename__ = 'encyclopedia'
+    id = db.Column(db.Integer, primary_key=True)
+    disease_name = db.Column(db.String(200), nullable=False, index=True) # Mapped from title/疾病名称
+    symptoms = db.Column(db.Text) # Mapped from symptoms/主要症状
+    content = db.Column(db.Text) # Mapped from content/症状描述
+    treatment = db.Column(db.Text) # Mapped from treatment/治疗方法
+    causes = db.Column(db.Text) # Mapped from causes/病因
+    prevention = db.Column(db.Text) # Mapped from prevention/预防措施
+    department = db.Column(db.String(100)) # Mapped from 症状类型
+    pinyin_index = db.Column(db.String(10), index=True) # A-Z index
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.disease_name, # Maintain compatibility with templates using 'title'
+            'symptoms': self.symptoms,
+            'content': self.content,
+            'treatment': self.treatment,
+            'causes': self.causes,
+            'prevention': self.prevention,
+            'department': self.department,
+            'first_letter': self.pinyin_index # Maintain compatibility with templates using 'first_letter'
+        }
+
+    # Compatibility properties for templates
+    @property
+    def title(self):
+        return self.disease_name
     
-    # Encyclopedia table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS encyclopedia (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            first_letter TEXT NOT NULL,
-            summary TEXT,
-            content TEXT,
-            symptoms TEXT
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    
-    # Initialize encyclopedia data if empty
-    init_encyclopedia_data()
+    @property
+    def first_letter(self):
+        return self.pinyin_index
+
+# Legacy support functions (to be refactored or kept as wrappers)
+# We will use SQLAlchemy for new operations but keep these if needed or rewrite them to use SQLAlchemy
+
+def init_db(app):
+    # db.init_app(app) # Should be called in main app
+    with app.app_context():
+        db.create_all()
+        init_encyclopedia_data()
 
 def init_encyclopedia_data():
-    conn = get_db_connection()
-    c = conn.cursor()
-    count = c.execute('SELECT COUNT(*) FROM encyclopedia').fetchone()[0]
-    
-    if count == 0:
-        import json
+    if MedicalEncyclopedia.query.first() is None:
         json_path = os.path.join(os.path.dirname(__file__), 'huank/DB_project/output/diseases.json')
         if os.path.exists(json_path):
             print("Loading encyclopedia data from JSON...")
@@ -56,94 +68,68 @@ def init_encyclopedia_data():
                 with open(json_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     for item in data:
-                        title = item.get('疾病名称', 'Unknown')
-                        content = item.get('症状描述', '')
-                        symptoms = ", ".join(item.get('主要症状', []))
-                        first_letter = title[0].upper() if title else '#'
+                        name = item.get('疾病名称', 'Unknown')
+                        # Generate Pinyin Index
+                        py = pinyin(name, style=Style.FIRST_LETTER)
+                        first_letter = py[0][0][0].upper() if py else '#'
                         if not first_letter.isalpha():
                             first_letter = '#'
                         
-                        c.execute('INSERT INTO encyclopedia (title, first_letter, content, symptoms) VALUES (?, ?, ?, ?)',
-                                  (title, first_letter, content, symptoms))
-                conn.commit()
+                        entry = MedicalEncyclopedia(
+                            disease_name=name,
+                            symptoms=", ".join(item.get('主要症状', [])),
+                            content=item.get('症状描述', ''),
+                            treatment=item.get('治疗方法', ''),
+                            causes=item.get('病因', ''),
+                            prevention=item.get('预防措施', ''),
+                            department=item.get('症状类型', ''),
+                            pinyin_index=first_letter
+                        )
+                        db.session.add(entry)
+                db.session.commit()
                 print("Encyclopedia data loaded.")
             except Exception as e:
                 print(f"Error loading encyclopedia data: {e}")
-        else:
-            print(f"Encyclopedia data file not found at {json_path}")
-            
-    conn.close()
+                db.session.rollback()
 
-# Encyclopedia Functions
+# Wrapper functions for UI compatibility
 def get_encyclopedia_letters():
-    conn = get_db_connection()
-    c = conn.cursor()
-    rows = c.execute('SELECT DISTINCT first_letter FROM encyclopedia ORDER BY first_letter').fetchall()
-    conn.close()
-    return [row['first_letter'] for row in rows]
+    # Return list of distinct pinyin_index
+    results = db.session.query(MedicalEncyclopedia.pinyin_index).distinct().order_by(MedicalEncyclopedia.pinyin_index).all()
+    return [r[0] for r in results]
 
 def get_articles_by_letter(letter):
-    conn = get_db_connection()
-    c = conn.cursor()
-    rows = c.execute('SELECT * FROM encyclopedia WHERE first_letter = ? ORDER BY title', (letter,)).fetchall()
-    conn.close()
-    return rows
+    return MedicalEncyclopedia.query.filter_by(pinyin_index=letter).order_by(MedicalEncyclopedia.disease_name).all()
 
 def search_articles(query):
-    conn = get_db_connection()
-    c = conn.cursor()
     search_term = f'%{query}%'
-    rows = c.execute('SELECT * FROM encyclopedia WHERE title LIKE ? OR symptoms LIKE ? ORDER BY title', 
-                     (search_term, search_term)).fetchall()
-    conn.close()
-    return rows
+    return MedicalEncyclopedia.query.filter(
+        (MedicalEncyclopedia.disease_name.like(search_term)) | 
+        (MedicalEncyclopedia.symptoms.like(search_term))
+    ).order_by(MedicalEncyclopedia.disease_name).all()
 
 def get_article_by_id(article_id):
-    conn = get_db_connection()
-    c = conn.cursor()
-    row = c.execute('SELECT * FROM encyclopedia WHERE id = ?', (article_id,)).fetchone()
-    conn.close()
-    return row
+    return MedicalEncyclopedia.query.get(article_id)
 
 def add_user(email, password, first_name, last_name):
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
         password_hash = generate_password_hash(password)
-        print(f"DEBUG: Attempting to insert user {email}...")
-        c.execute('INSERT INTO users (email, password_hash, first_name, last_name) VALUES (?, ?, ?, ?)',
-                  (email, password_hash, first_name, last_name))
-        conn.commit()
-        print(f"DEBUG: User {email} inserted successfully.")
+        new_user = User(email=email, password_hash=password_hash, first_name=first_name, last_name=last_name)
+        db.session.add(new_user)
+        db.session.commit()
         return True
-    except sqlite3.IntegrityError as e:
-        print(f"DEBUG: IntegrityError for {email}: {e}")
-        return False
     except Exception as e:
-        print(f"DEBUG: Unexpected error adding user {email}: {e}")
+        print(f"Error adding user: {e}")
+        db.session.rollback()
         return False
-    finally:
-        try:
-            conn.close()
-        except:
-            pass
-
-def get_user_by_email(email):
-    conn = get_db_connection()
-    c = conn.cursor()
-    user = c.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-    conn.close()
-    return user
-
-def get_user_by_id(user_id):
-    conn = get_db_connection()
-    c = conn.cursor()
-    user = c.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    conn.close()
-    return user
 
 def verify_user(email, password):
-    user = get_user_by_email(email)
-    if user and check_password_hash(user['password_hash'], password):
-        return user
+    user = User.query.filter_by(email=email).first()
+    if user and check_password_hash(user.password_hash, password):
+        return {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'password_hash': user.password_hash
+        }
     return None

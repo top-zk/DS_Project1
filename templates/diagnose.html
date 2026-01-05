@@ -152,10 +152,10 @@
                             <i class="fas fa-history me-1"></i> 历史记录
                         </button>
                     </div>
-                    <form action="{{ url_for('predict') }}" method="post" class="flex-grow-1 d-flex flex-column">
+                    <form action="{{ url_for('predict') }}" method="post" class="flex-grow-1 d-flex flex-column" novalidate>
                         <div class="mb-3 flex-grow-1 d-flex flex-column">
                             <textarea class="form-control flex-grow-1" name="symptoms" 
-                                placeholder="请详细描述您的症状，例如：&#10;最近两天感觉头痛，伴有轻微发烧，喉咙痛，浑身乏力..."
+                                placeholder="请详细描述您的症状，例如：&#10;最近经常感到头痛、头晕，晚上失眠..."
                                 required minlength="10">{% if result %}{{ result.text }}{% elif symptoms_input %}{{ symptoms_input }}{% endif %}</textarea>
                             <div class="form-text text-muted mt-2">请至少输入10个字，以便AI更准确地分析。</div>
                         </div>
@@ -288,13 +288,6 @@
             form.addEventListener('submit', function(e) {
                 const text = document.querySelector('textarea').value.trim();
                 
-                // Client-side validation
-                if(text.length < 10) {
-                    e.preventDefault();
-                    alert('描述过于简单，请至少提供3个相关的症状描述（或10个字以上）');
-                    return;
-                }
-
                 if(text) {
                     saveHistory(text);
                 }

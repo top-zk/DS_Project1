@@ -33,3 +33,6 @@
 2025-11-25 00:58:32,490 INFO 写入JSON: output/diseases.json, 记录数=50
 2025-11-25 01:00:36,168 WARNING Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='www.icd10data.com', port=443): Read timed out. (read timeout=20.0)")': /search?s=Febrile%20seizures
 2025-11-25 01:02:03,237 WARNING Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ReadTimeoutError("HTTPSConnectionPool(host='www.icd10data.com', port=443): Read timed out. (read timeout=20.0)")': /search?s=Henoch-Sch%C3%B6nlein%20purpura%20(HSP)
+2026-01-06 01:24:04,569 INFO NHS.uk 条目链接数=643
+2026-01-06 01:24:40,335 INFO NHS.uk 条目链接数=643
+2026-01-06 01:24:46,204 INFO 写入JSON: output/diseases.json, 记录数=5

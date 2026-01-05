@@ -59,6 +59,9 @@ def parse_code_page(session, url: str) -> List[DiseaseRecord]:
                 概率权重=weight,
                 紧急程度=urgency,
                 来源链接=url,
+                病因="",
+                治疗方法="",
+                预防措施=""
             )
             records.append(rec)
         return records

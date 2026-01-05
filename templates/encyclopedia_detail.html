@@ -22,6 +22,27 @@
                         <p class="text-secondary">{{ article['symptoms'] }}</p>
                     </div>
 
+                    {% if article['causes'] %}
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-danger border-bottom pb-2"><i class="fas fa-virus me-2"></i>病因</h5>
+                        <div class="text-secondary" style="white-space: pre-wrap;">{{ article['causes'] }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if article['treatment'] %}
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-info border-bottom pb-2"><i class="fas fa-pills me-2"></i>治疗方法</h5>
+                        <div class="text-secondary" style="white-space: pre-wrap;">{{ article['treatment'] }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if article['prevention'] %}
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-success border-bottom pb-2"><i class="fas fa-shield-alt me-2"></i>预防措施</h5>
+                        <div class="text-secondary" style="white-space: pre-wrap;">{{ article['prevention'] }}</div>
+                    </div>
+                    {% endif %}
+
                     <div class="mb-4">
                         <h5 class="fw-bold text-success border-bottom pb-2"><i class="fas fa-file-medical-alt me-2"></i>解决方案与详细描述</h5>
                         <div class="article-content text-dark" style="white-space: pre-wrap; line-height: 1.6;">{{ article['content'] }}</div>
