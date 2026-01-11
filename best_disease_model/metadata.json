@@ -1,0 +1,10 @@
+{
+  "model_type": "BERT",
+  "accuracy": 0.9712211879432624,
+  "timestamp": "2026-01-06T15:34:55.428029",
+  "parameters": {
+    "epochs": 4,
+    "batch_size": 16
+  },
+  "version": "1.0"
+}

@@ -1,9 +1,10 @@
 import random
 import time
 import logging
-from typing import Optional
+from typing import Optional, Set
 import hashlib
 import re
+import os
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -11,7 +12,6 @@ from urllib3.util.retry import Retry
 
 
 def setup_logger(log_path: str) -> None:
-    import os
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
@@ -86,3 +86,24 @@ def classify_symptom_type(text: str) -> str:
 def make_record_id(name: str, source_url: str) -> str:
     return hashlib.sha256(f"{name}|{source_url}".encode("utf-8")).hexdigest()
 
+
+class VisitedManager:
+    def __init__(self, path: str = "visited_urls.txt"):
+        self.path = path
+        self.visited: Set[str] = set()
+        self.load()
+
+    def load(self):
+        if os.path.exists(self.path):
+            with open(self.path, "r", encoding="utf-8") as f:
+                for line in f:
+                    self.visited.add(line.strip())
+
+    def add(self, url: str):
+        if url not in self.visited:
+            self.visited.add(url)
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(url + "\n")
+
+    def __contains__(self, url: str) -> bool:
+        return url in self.visited

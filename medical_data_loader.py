@@ -1,13 +1,16 @@
 import os
 import re
 import json
+import csv
 import xml.etree.ElementTree as ET
 import pandas as pd
 import numpy as np
-from medical_config import DATA_PATH, SAMPLE_DATA, TRAIN_DATA_PATH, VAL_DATA_PATH, DISEASE_SYMPTOM_TYPES, DATA_DIR, ENCYCLOPEDIA_DIR, ENCYCLOPEDIA_JSON_DIR, DISEASE_JSON_PATH, DISEASE_XML_PATH
+from typing import List, Dict, Any, Generator, Optional, Union, Iterator
+from medical_config import DATA_PATH, SAMPLE_DATA, TRAIN_DATA_PATH, VAL_DATA_PATH, DISEASE_SYMPTOM_TYPES, DATA_DIR, ENCYCLOPEDIA_DIR, ENCYCLOPEDIA_JSON_DIR, DISEASE_JSON_PATH, DISEASE_XML_PATH, DEMO_JSON_PATH
 from sklearn.model_selection import train_test_split
 import subprocess
 import importlib
+import random
 
 
 def install_required_packages():
@@ -16,11 +19,138 @@ def install_required_packages():
     for package in required:
         try:
             importlib.import_module(package)
-            print(f"{package} 已安装")
+            # print(f"{package} 已安装")
         except ImportError:
             print(f"正在安装 {package}...")
             subprocess.check_call(['pip', 'install', package])
             print(f"{package} 安装完成")
+
+
+class DataLoader:
+    """
+    Standardized data loader for medical data.
+    Supports JSON and CSV formats with validation, cleaning, and normalization.
+    """
+    
+    def __init__(self, batch_size: int = 1000):
+        """
+        Initialize the DataLoader.
+        
+        Args:
+            batch_size (int): Number of items to yield per batch.
+        """
+        self.batch_size = batch_size
+        
+    def load(self, file_path: str) -> Generator[List[Dict[str, Any]], None, None]:
+        """
+        Load data from a file (JSON or CSV) and yield batches of processed records.
+        
+        Args:
+            file_path (str): Path to the data file.
+            
+        Yields:
+            List[Dict[str, Any]]: A batch of processed data records.
+        """
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+            
+        _, ext = os.path.splitext(file_path)
+        ext = ext.lower()
+        
+        if ext == '.json':
+            iterator = self._parse_json(file_path)
+        elif ext == '.csv':
+            iterator = self._parse_csv(file_path)
+        else:
+            raise ValueError(f"Unsupported file format: {ext}")
+            
+        batch = []
+        for item in iterator:
+            processed = self._process_item(item)
+            if processed:
+                batch.append(processed)
+                if len(batch) >= self.batch_size:
+                    yield batch
+                    batch = []
+        
+        if batch:
+            yield batch
+
+    def _parse_json(self, file_path: str) -> Iterator[Dict[str, Any]]:
+        """Parse JSON file."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                # Optimized for list of objects
+                # Note: For very large files, consider line-delimited JSON or ijson
+                data = json.load(f)
+                if isinstance(data, list):
+                    for item in data:
+                        yield item
+                elif isinstance(data, dict):
+                    # Handle specific wrapper formats like {'data': [...]}
+                    if 'data' in data and isinstance(data['data'], list):
+                        for item in data['data']:
+                            yield item
+                    else:
+                        yield data
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON {file_path}: {e}")
+
+    def _parse_csv(self, file_path: str) -> Iterator[Dict[str, Any]]:
+        """Parse CSV file."""
+        try:
+            with open(file_path, 'r', encoding='utf-8', newline='') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    yield row
+        except Exception as e:
+            print(f"Error parsing CSV {file_path}: {e}")
+
+    def _process_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Validate, clean, and normalize a single data item."""
+        # 1. Normalize Keys
+        normalized = {}
+        
+        # Mappings
+        key_map = {
+            '疾病名称': 'title', 'title': 'title', 'name': 'title',
+            '主要症状': 'symptoms', 'symptoms': 'symptoms',
+            '症状描述': 'content', 'content': 'content', 'summary': 'content', 'desc': 'content',
+            '症状类型': 'category', 'category': 'category', 'label': 'category', 'department': 'category'
+        }
+        
+        for k, v in item.items():
+            if k in key_map:
+                normalized[key_map[k]] = v
+            else:
+                normalized[k] = v # Keep other fields
+        
+        # 2. Validation
+        if not normalized.get('title'):
+            return None # Skip items without title
+            
+        # 3. Cleaning & Formatting
+        if 'symptoms' in normalized:
+            if isinstance(normalized['symptoms'], str):
+                # Try to split by comma if it's a string
+                normalized['symptoms'] = [s.strip() for s in re.split(r'[,，、]', normalized['symptoms']) if s.strip()]
+            elif isinstance(normalized['symptoms'], list):
+                normalized['symptoms'] = [str(s).strip() for s in normalized['symptoms'] if str(s).strip()]
+        else:
+            normalized['symptoms'] = []
+            
+        if 'content' in normalized:
+            normalized['content'] = clean_text(str(normalized['content']))
+        else:
+            normalized['content'] = ""
+            
+        # 4. Auto-Categorization (Optional integration with existing logic)
+        if 'category' in normalized and normalized['category']:
+             catn = normalize_category(normalized['category'])
+             if catn:
+                 normalized['category'] = catn
+        
+        return normalized
 
 
 def load_disease_data_from_excel(file_path):
@@ -175,62 +305,93 @@ def load_disease_data_from_directory(dir_path):
                                 data.append((t, label))
     return data
 
+def is_chinese(string):
+    """Check if the string contains Chinese characters"""
+    for ch in string:
+        if u'\u4e00' <= ch <= u'\u9fff':
+            return True
+    return False
+
 def clean_text(t):
     if not t:
         return t
     s = str(t)
+    # Remove URLs
     s = re.sub(r"http[s]?://\S+", "", s)
+    # Remove metadata prefixes
     s = re.sub(r"(来源|网页源|Source|URL|链接)[:：].*", "", s)
     s = re.sub(r"(爬取时间|采集时间|抓取时间|时间|Time)[:：].*", "", s)
     s = re.sub(r"\s+", " ", s).strip()
+    
+    # Filter out if it doesn't contain any Chinese characters (likely English garbage)
+    if not is_chinese(s):
+        return ""
+        
     return s
+
+def auto_label_by_keywords(text):
+    """根据关键词自动标注"""
+    from medical_config import DISEASE_SYMPTOM_KEYWORDS
+    
+    max_count = 0
+    best_label = None
+    
+    for label, keywords in DISEASE_SYMPTOM_KEYWORDS.items():
+        count = 0
+        for kw in keywords:
+            if kw in text:
+                count += 1
+        if count > max_count:
+            max_count = count
+            best_label = label
+            
+    return best_label if max_count > 0 else None
 
 def load_disease_data_from_json(file_path):
     result = []
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             obj = json.load(f)
-        items = obj if isinstance(obj, list) else obj.get('data', [])
+        items = obj if isinstance(obj, list) else [obj] # Handle single object
+        
         name_to_id = {v: k for k, v in DISEASE_SYMPTOM_TYPES.items()}
-        if not items and isinstance(obj, dict):
-            text = obj.get('症状描述') or obj.get('text') or obj.get('symptom') or obj.get('content')
-            if not text:
-                t1 = obj.get('summary') or ''
-                t2 = obj.get('title') or ''
-                text = (str(t1) + ' ' + str(t2)).strip()
-            label_val = obj.get('症状类型') or obj.get('label') or obj.get('category')
-            if isinstance(label_val, str):
-                label = name_to_id.get(label_val, 0)
-            else:
-                label = label_val if label_val is not None else 0
-            try:
-                label = int(label)
-            except:
-                label = 0
-            t = str(text).strip()
-            t = clean_text(t)
-            if t:
-                result.append((t, label))
-        else:
-            for it in items:
-                text = it.get('症状描述') or it.get('text') or it.get('symptom') or it.get('content')
-                if not text:
-                    t1 = it.get('summary') or ''
-                    t2 = it.get('title') or ''
-                    text = (str(t1) + ' ' + str(t2)).strip()
-                label_val = it.get('症状类型') or it.get('label') or it.get('category')
-                if isinstance(label_val, str):
-                    label = name_to_id.get(label_val, 0)
+        
+        for it in items:
+            # Try to get text from various fields
+            text_parts = []
+            if it.get('疾病名称'): text_parts.append(str(it.get('疾病名称')))
+            if it.get('主要症状'): 
+                symptoms = it.get('主要症状')
+                if isinstance(symptoms, list):
+                    text_parts.extend([str(s) for s in symptoms])
                 else:
-                    label = label_val if label_val is not None else 0
-                try:
-                    label = int(label)
-                except:
-                    label = 0
-                t = str(text).strip()
-                t = clean_text(t)
-                if t:
-                    result.append((t, label))
+                    text_parts.append(str(symptoms))
+            
+            desc = it.get('症状描述') or it.get('text') or it.get('symptom') or it.get('content') or it.get('summary') or ''
+            if desc: text_parts.append(str(desc))
+            
+            text = " ".join(text_parts).strip()
+            text = clean_text(text)
+            
+            if not text:
+                continue
+
+            # Try to get label
+            label = None
+            label_val = it.get('症状类型') or it.get('label') or it.get('category')
+            
+            if label_val:
+                catn = normalize_category(label_val)
+                if catn:
+                    label = name_to_id.get(catn)
+            
+            # If no label, try auto-labeling
+            if label is None:
+                label = auto_label_by_keywords(text)
+                
+            if label is not None:
+                 result.append((text, int(label)))
+                 
     except Exception:
         pass
     return result
@@ -314,48 +475,222 @@ def load_disease_data_from_xml(file_path):
         return []
 
 
+def load_disease_data_from_db(db_path='instance/medical_app.db'):
+    """从数据库加载疾病数据"""
+    import sqlite3
+    if not os.path.exists(db_path):
+        if not os.path.exists(os.path.abspath(db_path)):
+             return []
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        # Check if table exists
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='encyclopedia';")
+        if not cursor.fetchone():
+            conn.close()
+            return []
+
+        query = "SELECT content, department FROM encyclopedia"
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        
+        data = []
+        name_to_id = {v: k for k, v in DISEASE_SYMPTOM_TYPES.items()}
+        
+        for _, row in df.iterrows():
+            text = clean_text(str(row['content']))
+            dept = row['department']
+            
+            label = name_to_id.get(dept, 7) # default to 7 if not found
+            
+            if text:
+                data.append((text, label))
+                
+        print(f"从数据库加载了 {len(data)} 条数据")
+        return data
+    except Exception as e:
+        print(f"从数据库加载失败: {e}")
+        return []
+
+def clean_and_validate_data(data):
+    """数据清洗和验证"""
+    unique_data = {} 
+    
+    for text, label in data:
+        if not text or len(text) < 5: 
+            continue
+        
+        # Additional cleaning
+        text = clean_text(text)
+        
+        if text not in unique_data:
+            unique_data[text] = label
+            
+    validated_data = [(k, v) for k, v in unique_data.items()]
+    print(f"清洗后剩余 {len(validated_data)} 条有效数据 (原始 {len(data)} 条)")
+    return validated_data
+
+
+def generate_synthetic_data_from_keywords():
+    """Generate synthetic data from keywords"""
+    from medical_config import DISEASE_SYMPTOM_KEYWORDS
+    
+    templates = [
+        "我最近总是{0}",
+        "感觉{0}",
+        "{0}怎么办",
+        "有没有治疗{0}的方法",
+        "请问{0}是什么病",
+        "最近{0}很难受",
+        "医生，我{0}",
+        "{0}好几天了",
+        "出现{0}症状",
+        "{0}，请问挂什么科",
+        "总是{0}",
+        "有点{0}",
+        "一直{0}",
+        "{0}很严重",
+        "特别是{0}",
+        "伴有{0}"
+    ]
+    
+    synthetic_data = []
+    for label, keywords in DISEASE_SYMPTOM_KEYWORDS.items():
+        for kw in keywords:
+            # Add the keyword itself
+            synthetic_data.append((kw, label))
+            # Add templated versions
+            for t in templates:
+                synthetic_data.append((t.format(kw), label))
+                
+            # Combinations (pairs)
+            if len(keywords) > 1:
+                other_kw = random.choice(keywords)
+                if other_kw != kw:
+                    synthetic_data.append((f"{kw}和{other_kw}", label))
+                    synthetic_data.append((f"既有{kw}又有{other_kw}", label))
+                    
+    print(f"生成的合成数据: {len(synthetic_data)} 条")
+    return synthetic_data
+
+def augment_data(data):
+    """Augment data with templates"""
+    templates = [
+        "我最近总是{0}",
+        "感觉{0}",
+        "{0}怎么办",
+        "有没有治疗{0}的方法",
+        "请问{0}是什么病",
+        "最近{0}很难受",
+        "医生，我{0}",
+        "{0}好几天了",
+        "出现{0}症状",
+        "{0}，请问挂什么科",
+        "总是{0}",
+        "有点{0}"
+    ]
+    
+    augmented = []
+    for text, label in data:
+        augmented.append((text, label)) # Keep original
+        
+        # If text is short (likely a symptom name), apply templates
+        if len(text) < 10:
+             for t in templates:
+                 augmented.append((t.format(text), label))
+        
+        # Also split comma separated symptoms
+        parts = re.split(r'[，,、\s]+', text)
+        if len(parts) > 1:
+            for p in parts:
+                p = p.strip()
+                if len(p) > 1:
+                     augmented.append((p, label))
+                     for t in templates:
+                        augmented.append((t.format(p), label))
+
+    # Deduplicate
+    return list(set(augmented))
+
 def prepare_disease_data():
     """准备疾病数据并保存为文本文件"""
     install_required_packages()
     os.makedirs(DATA_DIR, exist_ok=True)
 
     data = []
-    # 1) 优先从 disease.xml 读取
-    if os.path.exists(DISEASE_XML_PATH):
-        data = load_disease_data_from_xml(DISEASE_XML_PATH)
-    # 2) 若无 disease.xml，则从 diseases.json 提取并生成 disease.xml 后再读取
-    if not data:
-        disease_json_pairs = load_disease_pairs_from_diseases_json(DISEASE_JSON_PATH) if os.path.exists(DISEASE_JSON_PATH) else []
+    
+    # 0) Load Demo JSON (High Quality Chinese Data)
+    if os.path.exists(DEMO_JSON_PATH):
+        print(f"检测到示例数据源: {DEMO_JSON_PATH}")
+        demo_data = load_disease_data_from_json(DEMO_JSON_PATH)
+        if demo_data:
+            data.extend(demo_data)
+
+    # 1) 优先尝试从 JSON 更新并重写 XML，确保数据最新
+    if os.path.exists(DISEASE_JSON_PATH):
+        print(f"检测到 JSON 数据源: {DISEASE_JSON_PATH}，正在重新生成 XML...")
+        # Use new generic loader
+        disease_json_pairs = load_disease_data_from_json(DISEASE_JSON_PATH)
         if disease_json_pairs:
-            save_disease_data_to_xml(disease_json_pairs, DISEASE_XML_PATH)
-            xml_loaded = load_disease_data_from_xml(DISEASE_XML_PATH)
-            data = xml_loaded or disease_json_pairs
-    # 3) 若仍为空，回退到百科目录与JSON
-    if not data:
-        txt_data = []
-        if os.path.isdir(ENCYCLOPEDIA_DIR):
-            txt_data = load_disease_data_from_directory(ENCYCLOPEDIA_DIR)
-        json_data = []
-        if os.path.isdir(ENCYCLOPEDIA_JSON_DIR):
-            for r, _, files in os.walk(ENCYCLOPEDIA_JSON_DIR):
-                for n in files:
-                    if n.lower().endswith('.json'):
-                        json_data.extend(load_disease_data_from_json(os.path.join(r, n)))
-        if json_data:
-            xml_path = os.path.join(DATA_DIR, 'encyclopedia_data.xml')
-            save_disease_data_to_xml(json_data, xml_path)
-            xml_loaded = load_disease_data_from_xml(xml_path)
-            data = (txt_data or []) + (xml_loaded or json_data)
-        else:
-            data = txt_data
+            data.extend(disease_json_pairs)
+    
+    # 2) 如果没有 JSON，再尝试读取现有的 XML
+    if not data and os.path.exists(DISEASE_XML_PATH):
+        data = load_disease_data_from_xml(DISEASE_XML_PATH)
+
+    # 3) 总是尝试加载百科目录
+    json_data = []
+    if os.path.isdir(ENCYCLOPEDIA_JSON_DIR):
+        print(f"正在扫描百科目录: {ENCYCLOPEDIA_JSON_DIR}")
+        for r, _, files in os.walk(ENCYCLOPEDIA_JSON_DIR):
+            for n in files:
+                if n.lower().endswith('.json'):
+                    json_data.extend(load_disease_data_from_json(os.path.join(r, n)))
+    if json_data:
+        data.extend(json_data)
+        
+    # 4) 尝试从 TXT 目录加载
+    txt_data = []
+    if os.path.isdir(ENCYCLOPEDIA_DIR):
+         txt_data = load_disease_data_from_directory(ENCYCLOPEDIA_DIR)
+    if txt_data:
+        data.extend(txt_data)
+
     if not data and os.path.exists(DATA_PATH):
-        disease_data = load_disease_data_from_excel(DATA_PATH)
-        data = [(item['症状描述'], item['症状类型']) for item in disease_data]
+        print(f"尝试从 DATA_PATH 加载: {DATA_PATH}")
+        if DATA_PATH.lower().endswith('.json'):
+             json_data = load_disease_data_from_json(DATA_PATH)
+             if json_data:
+                 data.extend(json_data)
+        elif DATA_PATH.lower().endswith(('.xlsx', '.xls')):
+            disease_data = load_disease_data_from_excel(DATA_PATH)
+            data = [(item['症状描述'], item['症状类型']) for item in disease_data]
     if not data:
         data = [(item['症状描述'], item['症状类型']) for item in SAMPLE_DATA]
 
     if not data:
         data = [(item['症状描述'], item['症状类型']) for item in SAMPLE_DATA]
+    
+    # 尝试从数据库加载更多数据
+    db_data = load_disease_data_from_db()
+    if db_data:
+        data.extend(db_data)
+
+    # 数据清洗
+    data = clean_and_validate_data(data)
+
+    if not data:
+        data = [(item['症状描述'], item['症状类型']) for item in SAMPLE_DATA]
+    
+    # 5) Generate Synthetic Data from Keywords (CRITICAL for coverage)
+    syn_data = generate_synthetic_data_from_keywords()
+    data.extend(syn_data)
+
+    # Augment data with templates to increase size and robustness
+    print(f"增强前数据量: {len(data)}")
+    data = augment_data(data)
+    print(f"增强后数据量: {len(data)}")
 
     # 划分数据集
     if len(data) < 5:
@@ -407,4 +742,19 @@ def prepare_disease_data():
 
 
 if __name__ == "__main__":
+    # Test DataLoader
+    print("Testing DataLoader...")
+    loader = DataLoader(batch_size=2)
+    test_json = DEMO_JSON_PATH if os.path.exists(DEMO_JSON_PATH) else None
+    
+    if test_json:
+        print(f"Loading from {test_json}")
+        for batch in loader.load(test_json):
+            print(f"Loaded batch of size {len(batch)}")
+            for item in batch:
+                print(f"  - {item.get('title', 'No Title')}")
+            break # Just one batch
+    else:
+        print("Demo JSON not found for testing.")
+        
     prepare_disease_data()

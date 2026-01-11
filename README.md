@@ -4,31 +4,38 @@
 
 ## 🌟 核心功能 (Key Features)
 
-1.  **多源数据采集 (Data Crawler)**
+1.  **智能问答咨询 (Intelligent Chat Consultation)** (New!)
+    *   **多轮对话交互**：提供类似聊天机器人的交互体验，支持连续对话。
+    *   **动态追问**：根据初步识别的症状类型（如感冒、心脏问题等），智能抛出针对性的追问（如“体温多少？”“胸痛持续多久？”），以获取更精确的诊断信息。
+    *   **智能报告生成**：对话结束后，自动生成包含初步诊断、推荐科室、详细说明及免责声明的完整报告。
+    *   **上下文记忆**：能够结合上下文理解用户的症状描述。
+
+2.  **多源数据采集 (Data Crawler)**
     *   支持从权威医疗网站（MedlinePlus, NHS.uk, ICD10Data）自动抓取疾病数据。
     *   包含数据清洗、去重、ICD编码补全等预处理功能。
     *   支持多种存储方式：JSON文件、MongoDB、MySQL。
 
-2.  **智能疾病诊断 (Intelligent Diagnosis)**
-    *   基于 **BERT (bert-base-chinese)** 预训练模型进行微调。
+3.  **智能疾病诊断 (Intelligent Diagnosis)**
+    *   **混合诊断引擎**：结合 **BERT (bert-base-chinese)** 深度学习模型与 **专家规则系统 (Rule-based Keyword Matching)**。
+    *   **高精度识别**：利用关键词加权机制，显著提升了对典型症状（如“头痛”、“骨折”）的诊断准确率，有效避免误诊。
     *   能够根据用户输入的自然语言症状描述（如“头痛伴有恶心”），自动识别疾病类型。
     *   **智能校验**：前端与后端双重校验，确保输入的症状描述足够详细（至少10字），以提高诊断准确率。
     *   提供疾病类型预测、置信度分析及推荐就诊科室。
 
-3.  **医疗百科 (Medical Encyclopedia)**
+4.  **医疗百科 (Medical Encyclopedia)**
     *   **知识库构建**：基于爬取的数据自动构建本地医疗百科数据库 (SQLite)。
     *   **A-Z 索引**：支持按疾病名称首字母（A-Z）快速浏览查找。
-    *   **全文搜索**：支持通过关键词搜索疾病名称或症状。
+    *   **全文搜索**：支持通过关键词搜索疾病名称或症状，配备**全新设计的搜索交互界面**。
     *   **详情展示**：提供疾病的详细介绍、症状描述等信息。
 
-4.  **用户管理系统 (User Management)**
+5.  **用户管理系统 (User Management)**
     *   提供完整的用户注册与登录功能。
     *   基于 SQLite 数据库存储用户信息，保障数据安全。
     *   支持用户会话管理。
 
-5.  **Web 交互界面 (Web Interface)**
+6.  **Web 交互界面 (Web Interface)**
     *   基于 **Flask** 框架开发的轻量级Web应用。
-    *   提供简洁的用户界面，支持症状输入与一键诊断。
+    *   **UI/UX 全面升级**：采用现代化设计语言，优化了搜索栏、按钮及表单交互体验。
     *   **历史记录功能**：本地存储用户的问诊历史，支持侧边栏快速查看与回填。
     *   实时展示诊断结果、概率分布及就诊建议。
 
@@ -48,14 +55,17 @@ DS_Project1/
 ├── templates/              # Web应用模板
 │   ├── base.html           # 基础布局模板
 │   ├── home.html           # 首页
+│   ├── chat.html           # 智能问答咨询页面 (New!)
 │   ├── diagnose.html       # 诊断页面 (含历史记录与输入校验)
 │   ├── encyclopedia.html   # 医疗百科首页 (搜索 & 索引)
 │   ├── encyclopedia_detail.html # 医疗百科详情页
 │   ├── login.html          # 登录页面
 │   └── register.html       # 注册页面
+├── logs/                   # 系统日志目录
+├── import_data.py          # 批量数据导入工具
 ├── medical_train.py        # 模型训练脚本
 ├── medical_ui.py           # Web 应用启动脚本 (Flask入口)
-├── medical_config.py       # 医疗模型相关配置
+├── medical_config.py       # 医疗模型配置 (含关键词映射规则)
 ├── medical_data_loader.py  # 数据加载与预处理
 ├── models.py               # 数据库模型 (用户 & 百科)
 ├── requirements.txt        # 项目依赖清单
@@ -72,14 +82,21 @@ DS_Project1/
 请确保安装了项目所需的Python库：
 
 ```bash
-pip install torch transformers flask numpy requests beautifulsoup4 pymongo sqlalchemy pymysql werkzeug
+pip install torch transformers flask numpy requests beautifulsoup4 pymongo sqlalchemy pymysql werkzeug pypinyin
 ```
 
 ### 3. 模型准备
 项目默认使用 `bert-base-chinese`。如果本地没有模型文件，代码会自动尝试从 Hugging Face 下载，或者请手动将模型文件放入 `bert-base-chinese/` 目录。
 
 ### 4. 数据库初始化
-首次运行前，系统会自动初始化 SQLite 数据库 (`medical_app.db`)，用于存储用户信息和**医疗百科数据**（自动从爬虫生成的 JSON 文件导入）。
+首次运行前，系统会自动初始化 SQLite 数据库 (`medical_app.db`)。
+
+**数据导入 (Data Import)**:
+如果您已经运行了爬虫并希望将数据导入到百科数据库中，请运行：
+```bash
+python import_data.py
+```
+该工具会自动扫描 `output/` 目录下的 JSON 数据并将其导入数据库，同时在 `logs/` 目录下生成导入报告。
 
 ## 🚀 使用指南 (Usage Guide)
 
@@ -95,20 +112,25 @@ python medical_ui.py
 *   访问首页点击右上角“注册”按钮，创建新账号。
 *   使用注册邮箱登录后，即可使用完整的诊断功能。
 
-### 3. 进行智能诊断
-*   在“智能诊断”页面，输入您的症状描述（例如：“最近胸痛，伴有呼吸困难”）。
+### 3. 智能问答咨询 (New!)
+*   点击导航栏的“问答咨询”或首页相关入口。
+*   **交互式诊断**：像聊天一样描述您的不适，系统会根据您的情况进行追问（例如：“是否发烧？”“疼痛持续多久？”）。
+*   **获取报告**：回答完所有问题后，系统将为您生成一份详细的智能推测报告，包含初步诊断和就诊建议。
+
+### 4. 进行传统智能诊断
+*   在“智能诊断”页面，输入您的症状描述（例如：“最近经常感到头痛、头晕，晚上失眠...”）。
 *   **注意**：为了保证诊断效果，请至少输入 **10个字** 的描述。
 *   点击“开始智能诊断”，系统将分析并返回：
     *   最可能的疾病类型及其置信度。
     *   推荐的就诊科室。
     *   详细的概率分布图表。
 
-### 4. 查阅医疗百科
+### 5. 查阅医疗百科
 *   点击顶部导航栏的“医疗百科”。
 *   您可以直接在搜索框输入疾病名称，或点击下方的字母索引浏览疾病列表。
 *   点击具体疾病可查看详细信息。
 
-### 5. 训练诊断模型 (开发者选项)
+### 6. 训练诊断模型 (开发者选项)
 如果需要使用自己的数据重新训练模型：
 1.  准备数据：确保 `data/train_data.txt` 和 `data/val_data.txt` 存在且格式正确。
 2.  运行训练脚本：
@@ -117,7 +139,7 @@ python medical_ui.py
     ```
     训练完成后，最佳模型将保存为 `best_disease_model/` 或覆盖指定路径。
 
-### 6. 运行数据爬虫 (开发者选项)
+### 7. 运行数据爬虫 (开发者选项)
 如果需要抓取最新的医疗数据：
 ```bash
 cd huank/DB_project/crawler
@@ -126,7 +148,7 @@ python main.py
 
 ## ⚙️ 配置说明 (Configuration)
 
-*   **模型配置**: 修改 `medical_config.py` 可调整超参数（如 `EPOCHS`, `BATCH_SIZE`, `MAX_LEN`）及疾病标签映射。
+*   **模型与规则配置**: 修改 `medical_config.py` 可调整超参数（如 `EPOCHS`, `BATCH_SIZE`）以及 **`DISEASE_SYMPTOM_KEYWORDS` (诊断关键词规则)**。
 *   **爬虫配置**: 修改 `huank/DB_project/crawler/config.py` 可调整爬取策略及存储路径。
 *   **数据库配置**: 修改 `models.py` 可调整 SQLite 数据库文件路径及百科数据导入逻辑。
 

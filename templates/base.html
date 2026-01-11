@@ -131,6 +131,9 @@
                         <a class="nav-link {% if request.endpoint == 'diagnose_page' %}active{% endif %}" href="{{ url_for('diagnose_page') }}">智能诊断</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'chat' %}active{% endif %}" href="{{ url_for('chat') }}">问答咨询</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'encyclopedia' %}active{% endif %}" href="{{ url_for('encyclopedia') }}">医疗百科</a>
                     </li>
                     <li class="nav-item ms-2">

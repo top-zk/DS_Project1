@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}智能问答咨询 - 智能医疗诊断助手{% endblock %}
+
+{% block styles %}
+<style>
+    .chat-container {
+        max-width: 800px;
+        margin: 0 auto;
+        height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background-color: white;
+        overflow: hidden;
+    }
+    
+    .chat-history {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+    }
+    
+    .chat-message {
+        margin-bottom: 20px;
+        max-width: 80%;
+    }
+    
+    .chat-message.bot {
+        align-self: flex-start;
+        margin-right: auto;
+    }
+    
+    .chat-message.user {
+        align-self: flex-end;
+        margin-left: auto;
+        text-align: right;
+    }
+    
+    .message-content {
+        padding: 12px 16px;
+        border-radius: 15px;
+        display: inline-block;
+        word-wrap: break-word;
+        text-align: left;
+    }
+    
+    .bot .message-content {
+        background-color: #e9ecef;
+        color: #333;
+        border-bottom-left-radius: 2px;
+    }
+    
+    .user .message-content {
+        background-color: #007bff;
+        color: white;
+        border-bottom-right-radius: 2px;
+    }
+    
+    .chat-input-area {
+        padding: 20px;
+        border-top: 1px solid #ddd;
+        background-color: white;
+    }
+    
+    .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 5px;
+        color: white;
+        font-size: 14px;
+    }
+    
+    .bot .avatar {
+        background-color: #28a745;
+        margin-right: 10px;
+    }
+    
+    .user .avatar {
+        background-color: #007bff;
+        margin-left: 10px;
+        float: right;
+    }
+    
+    .message-wrapper {
+        display: flex;
+        align-items: flex-end;
+    }
+    
+    .bot .message-wrapper {
+        flex-direction: row;
+    }
+    
+    .user .message-wrapper {
+        flex-direction: row-reverse;
+    }
+    
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-primary"><i class="fas fa-user-md me-2"></i>智能问答咨询</h2>
+        <a href="{{ url_for('reset_chat') }}" class="btn btn-outline-danger btn-sm">
+            <i class="fas fa-redo me-1"></i>重新咨询
+        </a>
+    </div>
+
+    <div class="chat-container shadow">
+        <div class="chat-history" id="chatHistory">
+            {% for msg in history %}
+            <div class="chat-message {{ msg.role }}">
+                <div class="message-wrapper">
+                    <div class="avatar">
+                        {% if msg.role == 'bot' %}
+                        <i class="fas fa-robot"></i>
+                        {% else %}
+                        <i class="fas fa-user"></i>
+                        {% endif %}
+                    </div>
+                    <div class="message-content shadow-sm">
+                        {{ msg.content | safe }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="chat-input-area">
+            <form method="POST" action="{{ url_for('chat') }}" class="d-flex gap-2">
+                <input type="text" name="user_input" class="form-control" placeholder="请输入您的症状或回答..." required autocomplete="off" autofocus>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="fas fa-paper-plane"></i> 发送
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto scroll to bottom
+    const chatHistory = document.getElementById('chatHistory');
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+</script>
+{% endblock %}

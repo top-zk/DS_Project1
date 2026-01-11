@@ -2,14 +2,45 @@ import os
 import torch
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from transformers import BertTokenizer, BertForSequenceClassification
-from medical_config import DEVICE, MODEL_PATH, DISEASE_SYMPTOM_TYPES, DISEASE_SYMPTOM_KEYWORDS
-from models import db, init_db, add_user, verify_user, get_encyclopedia_letters, get_articles_by_letter, search_articles, get_article_by_id
+from medical_config import DEVICE, MODEL_PATH, DISEASE_SYMPTOM_TYPES, DISEASE_SYMPTOM_KEYWORDS, DISEASE_SYMPTOM_DESCRIPTIONS, DIAGNOSTIC_CRITERIA
+from models import db, init_db, add_user, verify_user, get_encyclopedia_letters, get_articles_by_letter, search_articles, get_article_by_id, log_interaction, get_related_diseases
+
+FOLLOW_UP_QUESTIONS = {
+    0: ["请问您是否发烧？体温大概是多少？", "是否有咳嗽或咳痰的情况？痰的颜色是什么？", "是否感觉呼吸困难或气促？"],
+    1: ["请问您是否有胸痛或胸闷的感觉？", "这种感觉是持续性的还是阵发性的？", "是否有心悸或心跳加速的感觉？"],
+    2: ["请问具体的腹痛位置在哪里？", "是否有恶心、呕吐或腹泻的症状？", "最近的饮食情况如何？"],
+    3: ["请问头痛的具体部位是哪里？", "是否有头晕或眩晕的感觉？", "睡眠质量如何？是否失眠？"],
+    4: ["请问具体是哪个关节或部位疼痛？", "疼痛是否影响活动？", "是否有受过外伤？"],
+    5: ["请问皮疹或瘙痒出现的部位在哪里？", "是否有红肿或脱皮？", "症状出现多久了？"],
+    6: ["请问是否有尿频、尿急或尿痛的症状？", "尿液颜色是否正常？", "是否有腰痛？"],
+    7: ["请问发热持续了多久？", "是否伴有乏力或体重下降？", "是否有盗汗现象？"],
+    8: ["请问具体是眼睛、耳朵、鼻子还是喉咙不舒服？", "是否有视力下降或听力下降？", "是否有流血或异常分泌物？"],
+    9: ["请问这种情绪持续了多久？", "是否影响到了日常生活或工作？", "是否有睡眠障碍？"]
+}
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_medical_ai_app'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///medical_app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+@app.template_filter('highlight')
+def highlight_filter(s, query):
+    if not query or not s:
+        return s
+    import re
+    from markupsafe import Markup
+    
+    keywords = query.strip().split()
+    # Sort keywords by length descending to handle overlapping phrases
+    keywords.sort(key=len, reverse=True)
+    
+    for kw in keywords:
+        if kw:
+            pattern = re.compile(re.escape(kw), re.IGNORECASE)
+            s = pattern.sub(lambda m: f'<mark>{m.group(0)}</mark>', str(s))
+            
+    return Markup(s)
 
 tokenizer = None
 model = None
@@ -43,8 +74,7 @@ def load_model_and_tokenizer():
             src,
             num_labels=len(DISEASE_SYMPTOM_TYPES),
             output_attentions=False,
-            output_hidden_states=False,
-            use_safetensors=False
+            output_hidden_states=False
         )
     except Exception:
         model = BertForSequenceClassification.from_pretrained(
@@ -94,13 +124,26 @@ def diagnose(text):
         
     probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
     pred = int(torch.argmax(logits, dim=1).cpu().item())
+    
+    # Identify matched keywords for explanation
+    matched_keywords = []
+    if pred in DISEASE_SYMPTOM_KEYWORDS:
+        for kw in DISEASE_SYMPTOM_KEYWORDS[pred]:
+            if kw in text:
+                matched_keywords.append(kw)
+    
+    explanation = f"模型根据症状描述识别出 {len(matched_keywords)} 个关键特征 ({', '.join(matched_keywords)})。" if matched_keywords else "模型根据语义分析判断。"
+    
     return {
         'text': text,
         'type_name': DISEASE_SYMPTOM_TYPES.get(pred, '未知疾病类型'),
         'type_id': pred,
         'prob': float(probs[pred]),
         'probs': [float(p) for p in probs.tolist()],
-        'department': get_recommended_department(pred)
+        'department': get_recommended_department(pred),
+        'description': DISEASE_SYMPTOM_DESCRIPTIONS.get(pred, ''),
+        'criteria': DIAGNOSTIC_CRITERIA.get(DISEASE_SYMPTOM_TYPES.get(pred), ''),
+        'explanation': explanation
     }
 
 @app.route('/', methods=['GET'])
@@ -168,21 +211,20 @@ def logout():
 def encyclopedia():
     letter = request.args.get('letter', 'A')
     query = request.args.get('q')
+    page = request.args.get('page', 1, type=int)
     
     letters = get_encyclopedia_letters()
     
     if query:
-        articles = search_articles(query)
+        pagination = search_articles(query, page=page)
         current_letter = None
     else:
-        # If letters list is not empty and letter is not in it (and not default A), fallback?
-        # For now just trust the query or DB.
-        articles = get_articles_by_letter(letter)
+        pagination = get_articles_by_letter(letter, page=page)
         current_letter = letter
         
     return render_template('encyclopedia.html', 
                            letters=letters, 
-                           articles=articles, 
+                           pagination=pagination, 
                            current_letter=current_letter,
                            query=query)
 
@@ -192,14 +234,131 @@ def encyclopedia_detail(article_id):
     if not article:
         flash('未找到相关文章', 'warning')
         return redirect(url_for('encyclopedia'))
-    return render_template('encyclopedia_detail.html', article=article)
+    
+    related_articles = get_related_diseases(article_id)
+    return render_template('encyclopedia_detail.html', article=article, related_articles=related_articles)
 
 @app.route('/predict', methods=['POST'])
 def predict():
     symptoms = request.form.get('symptoms', '').strip()
     
-    result = diagnose(symptoms) if symptoms else None
+    result = None
+    if symptoms:
+        result = diagnose(symptoms)
+        # Log interaction
+        user_id = session.get('user_id')
+        log_interaction(user_id, symptoms, result)
+        
     return render_template('diagnose.html', result=result, types=DISEASE_SYMPTOM_TYPES)
+
+def generate_report(context):
+    symptoms = context.get('symptoms_text', '')
+    result = diagnose(symptoms)
+    
+    report = f"""
+    <div class="card mt-3 border-success">
+        <div class="card-header bg-success text-white">
+            <i class="fas fa-file-medical-alt me-2"></i>智能推测报告
+        </div>
+        <div class="card-body">
+            <h5 class="card-title text-success">初步诊断：{result['type_name']}</h5>
+            <hr>
+            <p class="card-text"><strong><i class="fas fa-notes-medical me-2"></i>综合症状描述：</strong><br>{symptoms}</p>
+            <p class="card-text"><strong><i class="fas fa-hospital-user me-2"></i>推荐科室：</strong> {result['department']}</p>
+            <p class="card-text"><strong><i class="fas fa-info-circle me-2"></i>相关说明：</strong><br>{result['description']}</p>
+            <p class="card-text"><strong><i class="fas fa-clipboard-check me-2"></i>诊断标准参考：</strong><br>{result['criteria']}</p>
+            
+            <div class="alert alert-warning mt-3 mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <small><strong>免责声明：</strong> 本报告由AI生成，仅供参考，不能作为最终医疗诊断依据。请务必前往正规医院就医。</small>
+            </div>
+        </div>
+    </div>
+    """
+    return report
+
+@app.route('/chat', methods=['GET', 'POST'])
+def chat():
+    if 'chat_history' not in session:
+        session['chat_history'] = [{
+            'role': 'bot',
+            'content': '您好！我是您的智能医疗助手。请告诉我您哪里不舒服，或者有什么症状？'
+        }]
+        session['chat_state'] = 'init'
+        session['chat_context'] = {}
+    
+    if request.method == 'POST':
+        user_input = request.form.get('user_input', '').strip()
+        if user_input:
+            # Add user message
+            session['chat_history'].append({'role': 'user', 'content': user_input})
+            session.modified = True
+            
+            # Process logic
+            state = session.get('chat_state', 'init')
+            context = session.get('chat_context', {})
+            
+            bot_reply = "抱歉，我没有理解，请再说一遍。"
+            
+            if state == 'init':
+                # First diagnosis
+                result = diagnose(user_input)
+                prob = result['prob']
+                pred_type = result['type_id']
+                
+                # If prob is decent, or if specific keywords matched (which boosts prob)
+                if prob > 0.4: # Slightly lowered threshold
+                    session['chat_state'] = 'asking_details'
+                    context['type_id'] = pred_type
+                    context['symptoms_text'] = user_input
+                    context['question_idx'] = 0
+                    session['chat_context'] = context
+                    
+                    # Ask first question
+                    questions = FOLLOW_UP_QUESTIONS.get(pred_type, [])
+                    if questions:
+                        bot_reply = f"根据您的描述，初步推测可能与{result['type_name']}有关。为了更准确的判断，我想再多了解一些情况。{questions[0]}"
+                    else:
+                        # No questions, direct report
+                        session['chat_state'] = 'report'
+                        bot_reply = generate_report(context)
+                else:
+                    bot_reply = "抱歉，根据目前的描述，我还无法确定具体的问题方向。能否请您再详细描述一下症状？例如具体的疼痛部位、持续时间、诱发因素等。"
+            
+            elif state == 'asking_details':
+                type_id = context.get('type_id')
+                q_idx = context.get('question_idx', 0)
+                
+                # Store answer
+                context['symptoms_text'] += f"；{user_input}"
+                
+                # Move to next question
+                q_idx += 1
+                context['question_idx'] = q_idx
+                session['chat_context'] = context
+                
+                questions = FOLLOW_UP_QUESTIONS.get(type_id, [])
+                if q_idx < len(questions):
+                    bot_reply = questions[q_idx]
+                else:
+                    # All questions asked
+                    session['chat_state'] = 'report'
+                    bot_reply = generate_report(context)
+
+            elif state == 'report':
+                 bot_reply = "我已经为您生成了报告。如果您有新的问题，请点击页面上方的“重新咨询”按钮。"
+
+            session['chat_history'].append({'role': 'bot', 'content': bot_reply})
+            session.modified = True
+            
+    return render_template('chat.html', history=session['chat_history'])
+
+@app.route('/reset_chat')
+def reset_chat():
+    session.pop('chat_history', None)
+    session.pop('chat_state', None)
+    session.pop('chat_context', None)
+    return redirect(url_for('chat'))
 
 if __name__ == '__main__':
     try:

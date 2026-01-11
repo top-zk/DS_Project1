@@ -8,19 +8,20 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 MAX_LEN = 128
 BATCH_SIZE = 16
 EPOCHS = 4
-MODEL_PATH = r"D:\DS_Project\bert-base-chinese"
+MODEL_PATH = r"bert-base-chinese"
 
 # 数据文件路径
-DATA_PATH = r"D:\medical_symptoms.xlsx"  # 改为医疗数据文件
+DATA_PATH = r"output/diseases.json"  # 改为已爬取的JSON数据文件
 # 创建data文件夹路径
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 # 输出数据路径
 TRAIN_DATA_PATH = "data/train_data.txt"
 VAL_DATA_PATH = "data/val_data.txt"
-ENCYCLOPEDIA_JSON_DIR = r"D:\DS_Project\web_crapper\web_scraper\encyclopedia_data"
-ENCYCLOPEDIA_DIR = "web_crapper/encyclopedia_data"
-DISEASE_JSON_PATH = r"D:\DS_Project\huank\DB_project\output\diseases.json"
+ENCYCLOPEDIA_JSON_DIR = r"web_crapper/web_scraper/encyclopedia_data"
+ENCYCLOPEDIA_DIR = "web_crapper/web_scraper/encyclopedia_data"
+DISEASE_JSON_PATH = r"output/diseases.json"  # 确保指向正确的输出文件
+DEMO_JSON_PATH = r"huank/DB_project/demo_output.json"
 DISEASE_XML_PATH = "data/disease.xml"
 
 # 疾病症状类型映射
@@ -39,16 +40,16 @@ DISEASE_SYMPTOM_TYPES = {
 
 # 疾病症状关键词映射（用于规则辅助诊断）
 DISEASE_SYMPTOM_KEYWORDS = {
-    0: ['咳嗽', '咳痰', '呼吸困难', '气促', '喘息', '喉咙痛', '咽痛', '流涕', '鼻塞', '打喷嚏', '咯血', '胸痛', '肺', '支气管'],
-    1: ['胸闷', '心悸', '心慌', '心跳', '胸痛', '心前区', '高血压', '心律', '脉搏', '紫绀', '水肿'],
-    2: ['腹痛', '腹泻', '拉肚子', '恶心', '呕吐', '胃痛', '胃胀', '消化不良', '反酸', '烧心', '便秘', '食欲', '黄疸', '腹胀'],
-    3: ['头痛', '头疼', '头晕', '眩晕', '失眠', '睡不着', '昏迷', '意识', '抽搐', '麻木', '面瘫', '记忆力', '偏瘫', '手脚麻', '中风'],
-    4: ['关节痛', '关节炎', '腰痛', '腰疼', '背痛', '骨折', '扭伤', '肌肉痛', '酸痛', '颈椎', '腰椎', '活动受限', '红肿'],
+    0: ['咳嗽', '咳痰', '呼吸困难', '气促', '喘息', '喉咙痛', '咽痛', '流涕', '鼻塞', '打喷嚏', '咯血', '胸痛', '肺', '支气管', '感冒', '发烧'],
+    1: ['胸闷', '心悸', '心慌', '心跳', '胸痛', '心前区', '高血压', '心律', '脉搏', '紫绀', '水肿', '心脏'],
+    2: ['腹痛', '腹泻', '拉肚子', '恶心', '呕吐', '胃痛', '胃胀', '消化不良', '反酸', '烧心', '便秘', '食欲', '黄疸', '腹胀', '胃疼', '肚子疼', '不消化', '吃不下', '胃'],
+    3: ['头痛', '头疼', '头晕', '眩晕', '失眠', '睡不着', '昏迷', '意识', '抽搐', '麻木', '面瘫', '记忆力', '偏瘫', '手脚麻', '中风', '脑'],
+    4: ['关节痛', '关节炎', '腰痛', '腰疼', '背痛', '骨折', '扭伤', '肌肉痛', '酸痛', '颈椎', '腰椎', '活动受限', '红肿', '腿疼', '胳膊疼'],
     5: ['皮疹', '瘙痒', '痒', '红斑', '痘', '湿疹', '脱皮', '溃疡', '疱疹', '斑块', '皮肤'],
     6: ['尿频', '尿急', '尿痛', '血尿', '排尿', '腰痛', '肾', '浮肿', '尿不尽'],
     7: ['发热', '发烧', '体温', '乏力', '疲劳', '没劲', '消瘦', '体重', '盗汗', '淋巴结', '寒战'],
     8: ['视力', '眼痛', '眼睛', '看不清', '耳鸣', '听力', '耳聋', '耳朵', '鼻出血', '流鼻血', '牙痛', '牙齿', '喉咙', '嗓子'],
-    9: ['焦虑', '抑郁', '心情', '情绪', '烦躁', '紧张', '害怕', '想不开', '幻觉', '妄想', '精神', '心理']
+    9: ['焦虑', '抑郁', '心情', '情绪', '烦躁', '紧张', '害怕', '想不开', '幻觉', '妄想', '精神', '心理', '压力']
 }
 
 # 疾病症状描述映射
