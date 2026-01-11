@@ -9,21 +9,21 @@
             <h2 class="text-center mb-4 text-primary"><i class="fas fa-book-medical me-2"></i>医疗知识库</h2>
             
             <!-- Search -->
-            <form action="{{ url_for('encyclopedia') }}" method="get" class="d-flex mb-4">
-                <input class="form-control form-control-lg me-2 shadow-sm" type="search" name="q" placeholder="搜索疾病名称或症状..." value="{{ query if query else '' }}">
-                <button class="btn btn-medical btn-lg text-nowrap flex-shrink-0" type="submit">
+            <form action="{{ url_for('encyclopedia') }}" method="get" class="d-flex mb-5">
+                <input class="form-control form-control-lg me-3 shadow-sm rounded-pill border-0" style="padding-left: 30px;" type="search" name="q" placeholder="搜索疾病名称或症状..." value="{{ query if query else '' }}">
+                <button class="btn btn-medical btn-lg text-nowrap flex-shrink-0 px-4" type="submit">
                     <i class="fas fa-search me-1"></i> 搜索
                 </button>
                 {% if query %}
-                <a href="{{ url_for('encyclopedia') }}" class="btn btn-outline-secondary btn-lg ms-2 text-nowrap flex-shrink-0">清除</a>
+                <a href="{{ url_for('encyclopedia') }}" class="btn btn-outline-secondary btn-lg ms-2 rounded-pill text-nowrap flex-shrink-0">清除</a>
                 {% endif %}
             </form>
 
             <!-- A-Z Nav -->
             {% if not query %}
-            <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-5">
                 {% for l in letters %}
-                <a href="{{ url_for('encyclopedia', letter=l) }}" class="btn btn-sm {% if l == current_letter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <a href="{{ url_for('encyclopedia', letter=l) }}" class="btn {% if l == current_letter %}btn-medical shadow{% else %}btn-outline-light text-dark border-0 bg-white shadow-sm{% endif %} rounded-circle d-flex align-items-center justify-content-center fw-bold transition-all" style="width: 40px; height: 40px;">
                     {{ l }}
                 </a>
                 {% endfor %}
@@ -36,14 +36,18 @@
     <div class="row">
         <div class="col-md-10 offset-md-1">
             {% if pagination.items %}
-                <div class="list-group shadow-sm">
+                <div class="d-grid gap-3">
                 {% for article in pagination.items %}
-                    <a href="{{ url_for('encyclopedia_detail', article_id=article.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3">
-                        <div>
-                            <h5 class="mb-1 text-primary fw-bold">{{ article.disease_name | highlight(query) }}</h5>
-                            <small class="text-muted">{{ article.symptoms[:80] | highlight(query) }}...</small>
+                    <a href="{{ url_for('encyclopedia_detail', article_id=article.id) }}" class="card text-decoration-none border-0 shadow-sm hover-shadow transition-all p-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-2 text-primary fw-bold" style="font-size: 1.25rem;">{{ article.disease_name | highlight(query) }}</h5>
+                                <p class="text-muted mb-0" style="font-size: 0.95rem;">{{ article.symptoms[:100] | highlight(query) }}...</p>
+                            </div>
+                            <div class="text-primary ms-3">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
                         </div>
-                        <i class="fas fa-chevron-right text-muted"></i>
                     </a>
                 {% endfor %}
                 </div>

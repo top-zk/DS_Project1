@@ -51,6 +51,13 @@ class MedicalEncyclopedia(db.Model):
             'first_letter': self.pinyin_index # Maintain compatibility with templates using 'first_letter'
         }
 
+    @property
+    def structured_content(self):
+        try:
+            return json.loads(self.content)
+        except (ValueError, TypeError):
+            return None
+
     # Compatibility properties for templates
     @property
     def title(self):

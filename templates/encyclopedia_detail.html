@@ -18,61 +18,116 @@
                     <h1 class="card-title mb-4 text-primary fw-bold">{{ article.title }}</h1>
                     
                     <div class="mb-4">
-                        <h5 class="fw-bold text-dark border-bottom pb-2"><i class="fas fa-notes-medical me-2"></i>主要症状</h5>
-                        <p class="text-secondary">{{ article.symptoms }}</p>
+                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-3"><i class="fas fa-notes-medical me-2 text-primary"></i>主要症状</h5>
+                        <p class="text-secondary" style="line-height: 1.8; font-size: 1.05rem;">{{ article.symptoms }}</p>
                     </div>
 
                     {% if article.causes %}
-                    <div class="mb-4">
-                        <h5 class="fw-bold text-danger border-bottom pb-2"><i class="fas fa-virus me-2"></i>病因</h5>
-                        <div class="text-secondary" style="white-space: pre-wrap;">{{ article.causes }}</div>
+                    <div class="mb-5">
+                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-3"><i class="fas fa-virus me-2 text-danger"></i>病因</h5>
+                        <div class="text-secondary" style="white-space: pre-wrap; line-height: 1.8; font-size: 1.05rem;">{{ article.causes }}</div>
                     </div>
                     {% endif %}
 
                     {% if article.treatment %}
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                            <h5 class="fw-bold text-info mb-0"><i class="fas fa-pills me-2"></i>治疗方法</h5>
-                            <a href="https://www.baidu.com/s?wd={{ article.title }} 推荐药物" target="_blank" class="btn btn-outline-success btn-sm">
+                    <div class="mb-5">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-pills me-2 text-info"></i>治疗方法</h5>
+                            <a href="https://www.baidu.com/s?wd={{ article.title }} 推荐药物" target="_blank" class="btn btn-outline-success btn-sm rounded-pill px-3">
                                 <i class="fas fa-search me-1"></i> 在线搜索推荐药物
                             </a>
                         </div>
-                        <div class="text-secondary" style="white-space: pre-wrap;">{{ article.treatment }}</div>
+                        <div class="text-secondary" style="white-space: pre-wrap; line-height: 1.8; font-size: 1.05rem;">{{ article.treatment }}</div>
                     </div>
                     {% endif %}
 
                     {% if article.prevention %}
-                    <div class="mb-4">
-                        <h5 class="fw-bold text-success border-bottom pb-2"><i class="fas fa-shield-alt me-2"></i>预防措施</h5>
-                        <div class="text-secondary" style="white-space: pre-wrap;">{{ article.prevention }}</div>
+                    <div class="mb-5">
+                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-3"><i class="fas fa-shield-alt me-2 text-success"></i>预防措施</h5>
+                        <div class="text-secondary" style="white-space: pre-wrap; line-height: 1.8; font-size: 1.05rem;">{{ article.prevention }}</div>
                     </div>
                     {% endif %}
 
-                    <div class="mb-4">
-                        <h5 class="fw-bold text-success border-bottom pb-2"><i class="fas fa-file-medical-alt me-2"></i>解决方案与详细描述</h5>
-                        <div class="article-content text-dark" style="white-space: pre-wrap; line-height: 1.6;">{{ article.content }}</div>
+                    {% if article.structured_content %}
+                    <div class="mb-5">
+                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-4"><i class="fas fa-file-medical-alt me-2 text-warning"></i>解决方案与详细描述</h5>
+                        
+                        <!-- 摘要 -->
+                        <div class="mb-4 p-4 bg-light rounded-3 border-start border-4 border-primary shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-bullseye me-2"></i>【核心方案】</h6>
+                            <p class="text-secondary mb-0" style="line-height: 1.8; font-size: 1.05rem; text-align: justify;">{{ article.structured_content.solution_summary | safe }}</p>
+                        </div>
+
+                        <!-- 步骤 -->
+                        {% if article.structured_content.steps %}
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-success mb-3"><i class="fas fa-list-ol me-2"></i>实施步骤</h6>
+                            <ol class="list-group list-group-numbered list-group-flush">
+                                {% for step in article.structured_content.steps %}
+                                <li class="list-group-item bg-transparent border-0 ps-0 text-secondary mb-2" style="line-height: 1.6; font-size: 1.05rem;">
+                                    <span class="ms-2">{{ step | safe }}</span>
+                                </li>
+                                {% endfor %}
+                            </ol>
+                        </div>
+                        {% endif %}
+
+                        <!-- 注意事项 -->
+                        {% if article.structured_content.warnings %}
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-danger mb-3"><i class="fas fa-exclamation-triangle me-2"></i>注意事项</h6>
+                            <ul class="list-unstyled bg-danger bg-opacity-10 p-4 rounded-3">
+                                {% for warning in article.structured_content.warnings %}
+                                <li class="mb-3 text-secondary d-flex align-items-start">
+                                    <i class="fas fa-exclamation-circle text-danger mt-1 me-3 flex-shrink-0"></i>
+                                    <span style="line-height: 1.6; font-size: 1.05rem;">{{ warning | safe }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- 参考文献 -->
+                        {% if article.structured_content.references %}
+                        <div class="mt-5 pt-3 border-top">
+                            <small class="text-muted d-block fw-bold mb-2 text-uppercase" style="letter-spacing: 1px; font-size: 0.8rem;">参考文献 / References</small>
+                            <ul class="list-unstyled mb-0">
+                                {% for ref in article.structured_content.references %}
+                                <li class="text-muted small mb-1">
+                                    <span class="me-1">[{{ loop.index }}]</span> {{ ref }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
                     </div>
+                    {% else %}
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-dark border-bottom pb-3 mb-3"><i class="fas fa-file-medical-alt me-2 text-warning"></i>解决方案与详细描述</h5>
+                        <div class="article-content text-dark" style="white-space: pre-wrap; line-height: 1.9; font-size: 1.1rem; letter-spacing: 0.01em;">{{ article.content }}</div>
+                    </div>
+                    {% endif %}
                     
                 </div>
-                <div class="card-footer bg-white border-0 text-center pb-4">
-                     <a href="javascript:history.back()" class="btn btn-outline-secondary px-4">返回</a>
+                <div class="card-footer bg-white border-0 text-center pb-5">
+                     <a href="javascript:history.back()" class="btn btn-outline-secondary px-5 rounded-pill">返回</a>
                 </div>
             </div>
 
             <!-- Related Recommendations -->
             {% if related_articles %}
             <div class="mt-5">
-                <h4 class="mb-4 fw-bold text-secondary"><i class="fas fa-link me-2"></i>相关疾病推荐</h4>
+                <h4 class="mb-4 fw-bold text-dark"><i class="fas fa-link me-2 text-primary"></i>相关疾病推荐</h4>
                 <div class="row row-cols-1 row-cols-md-3 g-4">
                     {% for related in related_articles %}
                     <div class="col">
                         <div class="card h-100 shadow-sm border-0 hover-shadow transition-all">
-                            <div class="card-body">
-                                <h5 class="card-title text-primary fw-bold" style="font-size: 1.1rem;">{{ related.title }}</h5>
-                                <p class="card-text text-muted small">{{ related.symptoms[:40] }}...</p>
+                            <div class="card-body p-4">
+                                <h5 class="card-title text-primary fw-bold mb-3" style="font-size: 1.15rem;">{{ related.title }}</h5>
+                                <p class="card-text text-muted small" style="line-height: 1.6;">{{ related.symptoms[:50] }}...</p>
                             </div>
-                            <div class="card-footer bg-white border-0">
-                                <a href="{{ url_for('encyclopedia_detail', article_id=related.id) }}" class="btn btn-outline-primary btn-sm w-100 stretched-link">查看详情</a>
+                            <div class="card-footer bg-white border-0 pb-4 pt-0">
+                                <a href="{{ url_for('encyclopedia_detail', article_id=related.id) }}" class="btn btn-outline-primary btn-sm w-100 rounded-pill stretched-link">查看详情</a>
                             </div>
                         </div>
                     </div>

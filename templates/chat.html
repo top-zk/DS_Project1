@@ -5,27 +5,34 @@
 {% block styles %}
 <style>
     .chat-container {
-        max-width: 800px;
+        max-width: 900px;
         margin: 0 auto;
-        height: calc(100vh - 200px);
+        height: calc(100vh - 180px);
         display: flex;
         flex-direction: column;
-        border: 1px solid #ddd;
-        border-radius: 10px;
+        border: none;
+        border-radius: 20px;
         background-color: white;
         overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
     }
     
     .chat-history {
         flex: 1;
-        padding: 20px;
+        padding: 30px;
         overflow-y: auto;
-        background-color: #f8f9fa;
+        background-color: #ffffff;
     }
     
     .chat-message {
-        margin-bottom: 20px;
-        max-width: 80%;
+        margin-bottom: 24px;
+        max-width: 85%;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     
     .chat-message.bot {
@@ -40,51 +47,56 @@
     }
     
     .message-content {
-        padding: 12px 16px;
-        border-radius: 15px;
+        padding: 16px 20px;
+        border-radius: 18px;
         display: inline-block;
         word-wrap: break-word;
         text-align: left;
+        line-height: 1.6;
+        font-size: 1.05rem;
+        position: relative;
     }
     
     .bot .message-content {
-        background-color: #e9ecef;
-        color: #333;
-        border-bottom-left-radius: 2px;
+        background-color: #f0f2f5;
+        color: #2c3e50;
+        border-bottom-left-radius: 4px;
     }
     
     .user .message-content {
-        background-color: #007bff;
+        background-color: var(--medical-blue);
         color: white;
-        border-bottom-right-radius: 2px;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 15px rgba(50, 115, 220, 0.2);
     }
     
     .chat-input-area {
-        padding: 20px;
-        border-top: 1px solid #ddd;
+        padding: 24px 30px;
+        border-top: 1px solid #f0f0f0;
         background-color: white;
     }
     
     .avatar {
-        width: 36px;
-        height: 36px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         margin-bottom: 5px;
         color: white;
-        font-size: 14px;
+        font-size: 18px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     
     .bot .avatar {
-        background-color: #28a745;
-        margin-right: 10px;
+        background: linear-gradient(135deg, #42b883 0%, #35495e 100%);
+        margin-right: 15px;
     }
     
     .user .avatar {
-        background-color: #007bff;
-        margin-left: 10px;
+        background: linear-gradient(135deg, var(--medical-blue) 0%, var(--medical-dark-blue) 100%);
+        margin-left: 15px;
         float: right;
     }
     
@@ -106,14 +118,14 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="text-primary"><i class="fas fa-user-md me-2"></i>智能问答咨询</h2>
-        <a href="{{ url_for('reset_chat') }}" class="btn btn-outline-danger btn-sm">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-dark fw-bold"><i class="fas fa-comments-medical me-3 text-primary"></i>智能问答咨询</h2>
+        <a href="{{ url_for('reset_chat') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="fas fa-redo me-1"></i>重新咨询
         </a>
     </div>
 
-    <div class="chat-container shadow">
+    <div class="chat-container">
         <div class="chat-history" id="chatHistory">
             {% for msg in history %}
             <div class="chat-message {{ msg.role }}">
@@ -134,10 +146,10 @@
         </div>
         
         <div class="chat-input-area">
-            <form method="POST" action="{{ url_for('chat') }}" class="d-flex gap-2">
-                <input type="text" name="user_input" class="form-control" placeholder="请输入您的症状或回答..." required autocomplete="off" autofocus>
-                <button type="submit" class="btn btn-primary px-4">
-                    <i class="fas fa-paper-plane"></i> 发送
+            <form method="POST" action="{{ url_for('chat') }}" class="d-flex gap-3 align-items-center">
+                <input type="text" name="user_input" class="form-control form-control-lg rounded-pill bg-light border-0 px-4" placeholder="请输入您的症状或回答..." required autocomplete="off" autofocus style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                <button type="submit" class="btn btn-medical btn-lg rounded-circle d-flex align-items-center justify-content-center shadow transition-all" style="width: 50px; height: 50px; padding: 0;">
+                    <i class="fas fa-paper-plane" style="margin-left: -2px;"></i>
                 </button>
             </form>
         </div>
