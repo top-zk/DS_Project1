@@ -171,33 +171,66 @@ def get_articles_by_letter(letter, page=1, per_page=10):
         .order_by(MedicalEncyclopedia.disease_name)\
         .paginate(page=page, per_page=per_page, error_out=False)
 
+import re
+from deep_translator import GoogleTranslator
+
+# ... existing code ...
+
 def search_articles(query, page=1, per_page=10):
     if not query:
         return None
     
-    # Split query into keywords
+    # Check if query contains Chinese characters
+    has_chinese = bool(re.search(r'[\u4e00-\u9fa5]', query))
+    
     keywords = query.strip().split()
-    if not keywords:
+    search_keywords = list(keywords)
+    
+    # If Chinese is detected, translate to English
+    if has_chinese:
+        try:
+            # Translate the full query for better context
+            translated_query = GoogleTranslator(source='zh-CN', target='en').translate(query)
+            if translated_query:
+                # Add translated words to search keywords
+                translated_keywords = translated_query.split()
+                search_keywords.extend(translated_keywords)
+                print(f"Translated '{query}' to '{translated_query}' for search.")
+        except Exception as e:
+            print(f"Translation failed: {e}")
+            
+    if not search_keywords:
         return None
         
     # Build OR conditions for name and symptoms
     conditions = []
-    for kw in keywords:
+    for kw in search_keywords:
+        # Clean keyword
+        kw = kw.strip()
+        if not kw:
+            continue
+            
         term = f'%{kw}%'
         conditions.append(MedicalEncyclopedia.disease_name.like(term))
         conditions.append(MedicalEncyclopedia.symptoms.like(term))
     
+    if not conditions:
+        return None
+        
     # Custom sorting: Prioritize matches in disease_name
-    # We construct a case statement: 1 if name matches first keyword, else 2
-    # Simplified: Name matches any keyword -> higher priority
-    name_match_conditions = [MedicalEncyclopedia.disease_name.like(f'%{kw}%') for kw in keywords]
+    name_match_conditions = [MedicalEncyclopedia.disease_name.like(f'%{kw}%') for kw in search_keywords if kw.strip()]
     
-    return MedicalEncyclopedia.query.filter(or_(*conditions))\
-        .order_by(
-            case((or_(*name_match_conditions), 0), else_=1), # 0 comes before 1
+    query_obj = MedicalEncyclopedia.query.filter(or_(*conditions))
+    
+    if name_match_conditions:
+        query_obj = query_obj.order_by(
+            case((or_(*name_match_conditions), 0), else_=1),
             MedicalEncyclopedia.disease_name
-        )\
-        .paginate(page=page, per_page=per_page, error_out=False)
+        )
+    else:
+        query_obj = query_obj.order_by(MedicalEncyclopedia.disease_name)
+        
+    return query_obj.paginate(page=page, per_page=per_page, error_out=False)
 
 def get_related_diseases(article_id):
     article = MedicalEncyclopedia.query.get(article_id)

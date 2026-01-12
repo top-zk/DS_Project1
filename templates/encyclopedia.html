@@ -1,29 +1,34 @@
 {% extends "base.html" %}
 
-{% block title %}医疗知识库 - 智能医疗诊断助手{% endblock %}
+{% block title %}Medical Encyclopedia - AI Medical Assistant{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row mb-4">
-        <div class="col-md-8 offset-md-2">
-            <h2 class="text-center mb-4 text-primary"><i class="fas fa-book-medical me-2"></i>医疗知识库</h2>
+<div class="container py-5">
+    <div class="row mb-5">
+        <div class="col-md-8 offset-md-2 text-center">
+            <h2 class="display-5 fw-bold mb-4 text-primary">
+                <i class="fas fa-book-medical me-3"></i>Medical Encyclopedia
+            </h2>
+            <p class="lead text-muted mb-5">Comprehensive medical knowledge base for your health reference</p>
             
             <!-- Search -->
-            <form action="{{ url_for('encyclopedia') }}" method="get" class="d-flex mb-5">
-                <input class="form-control form-control-lg me-3 shadow-sm rounded-pill border-0" style="padding-left: 30px;" type="search" name="q" placeholder="搜索疾病名称或症状..." value="{{ query if query else '' }}">
-                <button class="btn btn-medical btn-lg text-nowrap flex-shrink-0 px-4" type="submit">
-                    <i class="fas fa-search me-1"></i> 搜索
+            <form action="{{ url_for('encyclopedia') }}" method="get" class="d-flex mb-5 shadow rounded-pill p-1 bg-white border">
+                <input class="form-control form-control-lg border-0 rounded-pill ps-4" type="search" name="q" placeholder="Search for disease or symptoms..." value="{{ query if query else '' }}" style="box-shadow: none;">
+                <button class="btn btn-medical btn-lg rounded-pill px-5 text-nowrap" type="submit">
+                    <i class="fas fa-search me-2"></i>Search
                 </button>
                 {% if query %}
-                <a href="{{ url_for('encyclopedia') }}" class="btn btn-outline-secondary btn-lg ms-2 rounded-pill text-nowrap flex-shrink-0">清除</a>
+                <a href="{{ url_for('encyclopedia') }}" class="btn btn-light btn-lg rounded-circle ms-1 d-flex align-items-center justify-content-center text-secondary" style="width: 48px; height: 48px;" title="Clear">
+                    <i class="fas fa-times"></i>
+                </a>
                 {% endif %}
             </form>
 
             <!-- A-Z Nav -->
             {% if not query %}
-            <div class="d-flex flex-wrap justify-content-center gap-2 mb-5">
+            <div class="d-flex flex-wrap justify-content-center gap-2">
                 {% for l in letters %}
-                <a href="{{ url_for('encyclopedia', letter=l) }}" class="btn {% if l == current_letter %}btn-medical shadow{% else %}btn-outline-light text-dark border-0 bg-white shadow-sm{% endif %} rounded-circle d-flex align-items-center justify-content-center fw-bold transition-all" style="width: 40px; height: 40px;">
+                <a href="{{ url_for('encyclopedia', letter=l) }}" class="btn {% if l == current_letter %}btn-primary shadow-lg{% else %}btn-outline-light text-dark border shadow-sm{% endif %} rounded-circle d-flex align-items-center justify-content-center fw-bold transition-all" style="width: 40px; height: 40px;">
                     {{ l }}
                 </a>
                 {% endfor %}
@@ -34,18 +39,21 @@
 
     <!-- Results -->
     <div class="row">
-        <div class="col-md-10 offset-md-1">
+        <div class="col-lg-10 offset-lg-1">
             {% if pagination.items %}
-                <div class="d-grid gap-3">
+                <div class="d-grid gap-4">
                 {% for article in pagination.items %}
-                    <a href="{{ url_for('encyclopedia_detail', article_id=article.id) }}" class="card text-decoration-none border-0 shadow-sm hover-shadow transition-all p-4">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h5 class="mb-2 text-primary fw-bold" style="font-size: 1.25rem;">{{ article.disease_name | highlight(query) }}</h5>
-                                <p class="text-muted mb-0" style="font-size: 0.95rem;">{{ article.symptoms[:100] | highlight(query) }}...</p>
+                    <a href="{{ url_for('encyclopedia_detail', article_id=article.id) }}" class="card text-decoration-none border-0 shadow-sm hover-shadow transition-all overflow-hidden">
+                        <div class="card-body p-4 d-flex align-items-center">
+                            <div class="bg-light rounded-circle p-3 text-primary me-4 d-none d-md-block">
+                                <i class="fas fa-file-medical fa-2x"></i>
                             </div>
-                            <div class="text-primary ms-3">
-                                <i class="fas fa-chevron-right"></i>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-2 text-primary fw-bold fs-4">{{ article.disease_name | highlight(query) }}</h5>
+                                <p class="text-muted mb-0 text-truncate-2">{{ article.symptoms[:120] | highlight(query) }}...</p>
+                            </div>
+                            <div class="text-primary ms-4">
+                                <i class="fas fa-chevron-right fa-lg opacity-50"></i>
                             </div>
                         </div>
                     </a>
@@ -53,34 +61,46 @@
                 </div>
 
                 <!-- Pagination -->
-                <nav aria-label="Page navigation" class="mt-4">
+                <nav aria-label="Page navigation" class="mt-5">
                     <ul class="pagination justify-content-center">
                         <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for('encyclopedia', page=pagination.prev_num, letter=current_letter, q=query) }}" tabindex="-1" aria-disabled="true">上一页</a>
+                            <a class="page-link rounded-pill px-3 me-2" href="{{ url_for('encyclopedia', page=pagination.prev_num, letter=current_letter, q=query) }}">Previous</a>
                         </li>
                         
                         {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                             {% if page_num %}
                                 <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                                    <a class="page-link" href="{{ url_for('encyclopedia', page=page_num, letter=current_letter, q=query) }}">{{ page_num }}</a>
+                                    <a class="page-link rounded-circle mx-1 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" href="{{ url_for('encyclopedia', page=page_num, letter=current_letter, q=query) }}">{{ page_num }}</a>
                                 </li>
                             {% else %}
-                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                                <li class="page-item disabled"><span class="page-link border-0">...</span></li>
                             {% endif %}
                         {% endfor %}
                         
                         <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                            <a class="page-link" href="{{ url_for('encyclopedia', page=pagination.next_num, letter=current_letter, q=query) }}">下一页</a>
+                            <a class="page-link rounded-pill px-3 ms-2" href="{{ url_for('encyclopedia', page=pagination.next_num, letter=current_letter, q=query) }}">Next</a>
                         </li>
                     </ul>
                 </nav>
             {% else %}
                 <div class="text-center py-5">
-                    <i class="fas fa-search fa-3x text-muted mb-3 opacity-50"></i>
-                    <p class="text-muted">未找到相关疾病信息。</p>
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px;">
+                        <i class="fas fa-search fa-3x text-muted opacity-50"></i>
+                    </div>
+                    <h4 class="text-muted mb-2">No related disease information found</h4>
+                    <p class="text-muted small">Try different keywords or browse by A-Z index</p>
                 </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<style>
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
 {% endblock %}
