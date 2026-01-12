@@ -134,7 +134,19 @@ def diagnose(text):
     
     explanation = f"模型根据症状描述识别出 {len(matched_keywords)} 个关键特征 ({', '.join(matched_keywords)})。" if matched_keywords else "模型根据语义分析判断。"
     
-    return {
+    # --- New: Find Specific Disease Match ---
+    # Attempt to find the most relevant article in the encyclopedia
+    specific_disease_match = None
+    try:
+        # Search for articles using the input text
+        # This uses the same search logic as the encyclopedia page (including translation)
+        search_res = search_articles(text, page=1, per_page=1)
+        if search_res and search_res.items:
+            specific_disease_match = search_res.items[0]
+    except Exception as e:
+        print(f"Error finding specific disease match: {e}")
+
+    result = {
         'text': text,
         'type_name': DISEASE_SYMPTOM_TYPES.get(pred, '未知疾病类型'),
         'type_id': pred,
@@ -145,6 +157,15 @@ def diagnose(text):
         'criteria': DIAGNOSTIC_CRITERIA.get(DISEASE_SYMPTOM_TYPES.get(pred), ''),
         'explanation': explanation
     }
+
+    if specific_disease_match:
+        result['specific_disease'] = {
+            'id': specific_disease_match.id,
+            'name': specific_disease_match.disease_name,
+            'symptoms_snippet': specific_disease_match.symptoms[:100] + '...' if specific_disease_match.symptoms else ''
+        }
+        
+    return result
 
 @app.route('/', methods=['GET'])
 def index():
@@ -232,7 +253,7 @@ def encyclopedia():
 def encyclopedia_detail(article_id):
     article = get_article_by_id(article_id)
     if not article:
-        flash('未找到相关文章', 'warning')
+        flash('Article not found', 'warning')
         return redirect(url_for('encyclopedia'))
     
     related_articles = get_related_diseases(article_id)
@@ -254,7 +275,7 @@ def predict():
 def generate_report(context):
     symptoms = context.get('symptoms_text', '')
     result = diagnose(symptoms)
-    
+
     report = f"""
     <div class="card mt-3 border-success">
         <div class="card-header bg-success text-white">
@@ -265,6 +286,7 @@ def generate_report(context):
             <hr>
             <p class="card-text"><strong><i class="fas fa-notes-medical me-2"></i>综合症状描述：</strong><br>{symptoms}</p>
             <p class="card-text"><strong><i class="fas fa-hospital-user me-2"></i>推荐科室：</strong> {result['department']}</p>
+            
             <p class="card-text"><strong><i class="fas fa-info-circle me-2"></i>相关说明：</strong><br>{result['description']}</p>
             <p class="card-text"><strong><i class="fas fa-clipboard-check me-2"></i>诊断标准参考：</strong><br>{result['criteria']}</p>
             
