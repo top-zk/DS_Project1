@@ -107,8 +107,7 @@ def init_encyclopedia_data():
     if MedicalEncyclopedia.query.first() is None:
         # Load from multiple sources
         sources = [
-            os.path.join(os.path.dirname(__file__), 'huank/DB_project/demo_output.json'), # High quality Chinese data
-            os.path.join(os.path.dirname(__file__), 'huank/DB_project/output/diseases.json') # Original data (mixed)
+            os.path.join(os.path.dirname(__file__), 'output/diseases.json') # Standard diseases.json
         ]
         
         # Load existing names to avoid duplicates (in case of partial load)
