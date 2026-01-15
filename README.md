@@ -24,6 +24,7 @@
 
 4.  **医疗百科 (Medical Encyclopedia)**
     *   **知识库构建**：基于爬取的数据自动构建本地医疗百科数据库 (SQLite)。
+    *   **结构化数据展示 (New!)**：对核心疾病数据进行了深度结构化清洗，详情页提供“核心方案”与“详细说明”的分层展示，重点突出，易于阅读。
     *   **A-Z 索引**：支持按疾病名称首字母（A-Z）快速浏览查找。
     *   **全文搜索**：支持通过关键词搜索疾病名称或症状，配备**全新设计的搜索交互界面**。
     *   **详情展示**：提供疾病的详细介绍、症状描述等信息。
@@ -35,7 +36,7 @@
 
 6.  **Web 交互界面 (Web Interface)**
     *   基于 **Flask** 框架开发的轻量级Web应用。
-    *   **UI/UX 全面升级**：采用现代化设计语言，优化了搜索栏、按钮及表单交互体验。
+    *   **UI/UX 全面升级**：采用现代化设计语言，统一视觉风格。新增卡片悬停、按钮微交互及平滑过渡动画，提供流畅的用户体验。
     *   **历史记录功能**：本地存储用户的问诊历史，支持侧边栏快速查看与回填。
     *   实时展示诊断结果、概率分布及就诊建议。
 
@@ -82,7 +83,7 @@ DS_Project1/
 请确保安装了项目所需的Python库：
 
 ```bash
-pip install torch transformers flask numpy requests beautifulsoup4 pymongo sqlalchemy pymysql werkzeug pypinyin
+pip install torch transformers flask numpy requests beautifulsoup4 pymongo sqlalchemy pymysql werkzeug pypinyin deep-translator
 ```
 
 ### 3. 模型准备
