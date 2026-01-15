@@ -26,6 +26,18 @@ class UserInteraction(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     feedback = db.Column(db.String(50))  # 'correct', 'incorrect'
 
+class SymptomDiseaseRule(db.Model):
+    __tablename__ = 'symptom_disease_rules'
+    id = db.Column(db.Integer, primary_key=True)
+    keywords = db.Column(db.Text, nullable=False) # JSON list or comma-separated string of 5 keywords
+    disease_name = db.Column(db.String(200), nullable=False)
+    department = db.Column(db.String(100))
+    advice = db.Column(db.Text) # Treatment/Advice
+
+    @property
+    def keyword_list(self):
+        return self.keywords.split(',') if self.keywords else []
+
 class MedicalEncyclopedia(db.Model):
     __tablename__ = 'encyclopedia'
     id = db.Column(db.Integer, primary_key=True)

@@ -1,166 +1,206 @@
 {% extends "base.html" %}
 
-{% block title %}智能问答咨询 - 智能医疗诊断助手{% endblock %}
+{% block title %}AI 医疗咨询{% endblock %}
 
-{% block styles %}
+{% block content %}
 <style>
     .chat-container {
-        max-width: 900px;
-        margin: 0 auto;
-        height: calc(100vh - 180px);
-        display: flex;
-        flex-direction: column;
-        border: none;
-        border-radius: 20px;
-        background-color: white;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    }
-    
-    .chat-history {
-        flex: 1;
-        padding: 30px;
+        height: 60vh;
+        min-height: 400px;
         overflow-y: auto;
-        background-color: #ffffff;
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
     }
-    
-    .chat-message {
-        margin-bottom: 24px;
-        max-width: 85%;
-        animation: fadeIn 0.3s ease;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .chat-message.bot {
-        align-self: flex-start;
-        margin-right: auto;
-    }
-    
-    .chat-message.user {
-        align-self: flex-end;
-        margin-left: auto;
-        text-align: right;
-    }
-    
-    .message-content {
-        padding: 16px 20px;
+    .message-bubble {
+        max-width: 80%;
+        padding: 12px 16px;
         border-radius: 18px;
-        display: inline-block;
-        word-wrap: break-word;
-        text-align: left;
-        line-height: 1.6;
-        font-size: 1.05rem;
         position: relative;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
-    
-    .bot .message-content {
-        background-color: #f0f2f5;
-        color: #2c3e50;
-        border-bottom-left-radius: 4px;
+    .message-bot {
+        background-color: #ffffff;
+        color: #212529;
+        border-top-left-radius: 4px;
+        border: 1px solid #e9ecef;
     }
-    
-    .user .message-content {
-        background-color: var(--medical-blue);
+    .message-user {
+        background-color: #0d6efd;
         color: white;
-        border-bottom-right-radius: 4px;
-        box-shadow: 0 4px 15px rgba(50, 115, 220, 0.2);
+        border-top-right-radius: 4px;
     }
-    
-    .chat-input-area {
-        padding: 24px 30px;
-        border-top: 1px solid #f0f0f0;
-        background-color: white;
-    }
-    
     .avatar {
-        width: 42px;
-        height: 42px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 5px;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .avatar-bot {
+        background: linear-gradient(135deg, #20c997, #0d6efd);
         color: white;
-        font-size: 18px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    
-    .bot .avatar {
-        background: linear-gradient(135deg, #42b883 0%, #35495e 100%);
-        margin-right: 15px;
+    .avatar-user {
+        background-color: #6c757d;
+        color: white;
     }
-    
-    .user .avatar {
-        background: linear-gradient(135deg, var(--medical-blue) 0%, var(--medical-dark-blue) 100%);
-        margin-left: 15px;
-        float: right;
+    .typing-indicator {
+        display: none;
+        padding: 10px;
+        background: #fff;
+        border-radius: 20px;
+        width: fit-content;
+        margin-left: 45px;
+        margin-bottom: 15px;
     }
-    
-    .message-wrapper {
-        display: flex;
-        align-items: flex-end;
+    .typing-dot {
+        height: 8px;
+        width: 8px;
+        margin: 0 2px;
+        background-color: #adb5bd;
+        border-radius: 50%;
+        display: inline-block;
+        animation: bounce 1.4s infinite ease-in-out both;
     }
-    
-    .bot .message-wrapper {
-        flex-direction: row;
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
     }
-    
-    .user .message-wrapper {
-        flex-direction: row-reverse;
-    }
-    
 </style>
-{% endblock %}
 
-{% block content %}
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-dark fw-bold"><i class="fas fa-comments-medical me-3 text-primary"></i>智能问答咨询</h2>
-        <a href="{{ url_for('reset_chat') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-            <i class="fas fa-redo me-1"></i>重新咨询
-        </a>
-    </div>
-
-    <div class="chat-container">
-        <div class="chat-history" id="chatHistory">
-            {% for msg in history %}
-            <div class="chat-message {{ msg.role }}">
-                <div class="message-wrapper">
-                    <div class="avatar">
-                        {% if msg.role == 'bot' %}
-                        <i class="fas fa-robot"></i>
-                        {% else %}
-                        <i class="fas fa-user"></i>
-                        {% endif %}
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow border-0">
+                <!-- Header -->
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar avatar-bot me-3">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold text-primary">AI 医疗助手</h5>
+                            <small class="text-muted">基于BERT模型与专家规则库</small>
+                        </div>
                     </div>
-                    <div class="message-content shadow-sm">
-                        {{ msg.content | safe }}
+                    <a href="{{ url_for('reset_chat') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                        <i class="fas fa-trash-alt me-1"></i>清空对话
+                    </a>
+                </div>
+
+                <!-- Chat Body -->
+                <div class="card-body p-0">
+                    <div id="chatBox" class="chat-container">
+                        {% for msg in history %}
+                            <div class="d-flex mb-4 {% if msg.role == 'user' %}justify-content-end{% else %}justify-content-start{% endif %}">
+                                {% if msg.role == 'bot' %}
+                                    <div class="avatar avatar-bot me-2">
+                                        <i class="fas fa-user-md"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="message-bubble {% if msg.role == 'user' %}message-user{% else %}message-bot{% endif %}">
+                                    {{ msg.content | safe }}
+                                </div>
+
+                                {% if msg.role == 'user' %}
+                                    <div class="avatar avatar-user ms-2">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        
+                        <!-- Typing Indicator -->
+                        <div id="typingIndicator" class="typing-indicator shadow-sm border">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Footer / Input -->
+                <div class="card-footer bg-white p-3 border-top">
+                    <form id="chatForm" method="POST" action="{{ url_for('chat') }}">
+                        <div class="input-group input-group-lg">
+                            <textarea class="form-control border-0 bg-light rounded-start ps-4" 
+                                      id="userInput"
+                                      name="user_input" 
+                                      rows="1" 
+                                      placeholder="请描述您的症状（如：头痛、发烧...）" 
+                                      required 
+                                      style="resize: none; min-height: 50px;"></textarea>
+                            <button class="btn btn-primary px-4 rounded-end" type="submit" id="sendBtn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                <i class="fas fa-shield-alt me-1"></i>您的对话内容仅用于辅助诊断，请勿输入个人隐私信息。
+                            </small>
+                        </div>
+                    </form>
+                </div>
             </div>
-            {% endfor %}
-        </div>
-        
-        <div class="chat-input-area">
-            <form method="POST" action="{{ url_for('chat') }}" class="d-flex gap-3 align-items-center">
-                <input type="text" name="user_input" class="form-control form-control-lg rounded-pill bg-light border-0 px-4" placeholder="请输入您的症状或回答..." required autocomplete="off" autofocus style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-                <button type="submit" class="btn btn-medical btn-lg rounded-circle d-flex align-items-center justify-content-center shadow transition-all" style="width: 50px; height: 50px; padding: 0;">
-                    <i class="fas fa-paper-plane" style="margin-left: -2px;"></i>
-                </button>
-            </form>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-    // Auto scroll to bottom
-    const chatHistory = document.getElementById('chatHistory');
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    document.addEventListener("DOMContentLoaded", function() {
+        const chatBox = document.getElementById("chatBox");
+        const chatForm = document.getElementById("chatForm");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const typingIndicator = document.getElementById("typingIndicator");
+
+        // Scroll to bottom
+        function scrollToBottom() {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        scrollToBottom();
+
+        // Auto-resize textarea
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') {
+                this.style.height = '50px';
+            }
+        });
+
+        // Submit on Enter (Shift+Enter for new line)
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (this.value.trim() !== '') {
+                    chatForm.requestSubmit();
+                }
+            }
+        });
+
+        // Show loading state on submit
+        chatForm.addEventListener('submit', function() {
+            // Disable input and button
+            userInput.readOnly = true;
+            sendBtn.disabled = true;
+            
+            // Show typing indicator
+            typingIndicator.style.display = 'block';
+            scrollToBottom();
+            
+            // Add a small delay to ensure UI updates before form submission proceeds (though form submit is sync, 
+            // the visual feedback is instant)
+        });
+    });
 </script>
 {% endblock %}
