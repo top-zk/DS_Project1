@@ -3,7 +3,8 @@ import torch
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from transformers import BertTokenizer, BertForSequenceClassification
 from medical_config import DEVICE, MODEL_PATH, DISEASE_SYMPTOM_TYPES, DISEASE_SYMPTOM_KEYWORDS, DISEASE_SYMPTOM_DESCRIPTIONS, DIAGNOSTIC_CRITERIA
-from models import db, init_db, add_user, verify_user, get_encyclopedia_letters, get_articles_by_letter, search_articles, get_article_by_id, log_interaction, get_related_diseases
+from models import db, init_db, add_user, verify_user, get_encyclopedia_letters, get_articles_by_letter, search_articles, get_article_by_id, log_interaction, get_related_diseases, SymptomDiseaseRule
+from sqlalchemy import func
 
 FOLLOW_UP_QUESTIONS = {
     0: ["请问您是否发烧？体温大概是多少？", "是否有咳嗽或咳痰的情况？痰的颜色是什么？", "是否感觉呼吸困难或气促？"],
@@ -17,6 +18,130 @@ FOLLOW_UP_QUESTIONS = {
     8: ["请问具体是眼睛、耳朵、鼻子还是喉咙不舒服？", "是否有视力下降或听力下降？", "是否有流血或异常分泌物？"],
     9: ["请问这种情绪持续了多久？", "是否影响到了日常生活或工作？", "是否有睡眠障碍？"]
 }
+
+def extract_keywords_from_rules(text):
+    """
+    Scan text against all keywords present in the SymptomDiseaseRule table.
+    Returns a list of unique matched keyword strings.
+    """
+    matched = set()
+    try:
+        # Get all rules
+        rules = SymptomDiseaseRule.query.all()
+        # Flatten all keyword combinations into a single set of unique symptoms
+        all_symptoms = set()
+        for r in rules:
+            if r.keywords:
+                for k in r.keywords.split(','):
+                    all_symptoms.add(k.strip())
+        
+        # Check if any symptom is in the text
+        for s in all_symptoms:
+            if s and s in text:
+                matched.add(s)
+                
+    except Exception as e:
+        print(f"Error extracting keywords: {e}")
+    return list(matched)
+
+def get_next_question(current_keywords):
+    """
+    Find the best matching rule and generate a question about missing symptoms.
+    """
+    if not current_keywords:
+        return None, None
+
+    try:
+        # Find rules that overlap with current_keywords
+        # We score rules by intersection size
+        rules = SymptomDiseaseRule.query.all()
+        best_rule = None
+        best_overlap = 0
+        
+        current_set = set(current_keywords)
+        
+        for rule in rules:
+            rule_kws = set(rule.keywords.split(',')) if rule.keywords else set()
+            overlap = len(current_set.intersection(rule_kws))
+            
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_rule = rule
+            elif overlap == best_overlap and best_rule:
+                pass
+        
+        if best_rule and best_overlap > 0:
+            # Found a candidate rule.
+            # Find missing keywords from this rule
+            rule_kws = set(best_rule.keywords.split(',')) if best_rule.keywords else set()
+            missing = list(rule_kws - current_set)
+            
+            if missing:
+                # Ask about missing symptoms
+                # Pick up to 3 to ask
+                to_ask = missing[:3]
+                question = f"为了更准确地判断是否为{best_rule.disease_name}，请问您是否还有以下症状：{', '.join(to_ask)}？"
+                return question, best_rule
+                
+    except Exception as e:
+        print(f"Error generating question: {e}")
+    
+    return None, None
+
+def match_suspected_disease(all_keywords, predicted_department=None):
+    """
+    Find the most likely disease based on collected keywords.
+    """
+    best_match = None
+    
+    try:
+        if all_keywords:
+            # Score all rules based on overlap count
+            rules = SymptomDiseaseRule.query.all()
+            best_rule = None
+            max_score = 0
+            
+            user_kws = set(all_keywords)
+            
+            for rule in rules:
+                rule_kws = set(rule.keywords.split(',')) if rule.keywords else set()
+                overlap = len(user_kws.intersection(rule_kws))
+                
+                if overlap > max_score:
+                    max_score = overlap
+                    best_rule = rule
+            
+            if best_rule:
+                return {
+                    'name': best_rule.disease_name,
+                    'count': max_score,
+                    'department': best_rule.department,
+                    'advice': best_rule.advice,
+                    'source': 'keywords'
+                }
+
+        # 2. Fallback: Department Matching
+        if not best_match and predicted_department:
+            fallback = db.session.query(
+                SymptomDiseaseRule.disease_name,
+                SymptomDiseaseRule.department,
+                SymptomDiseaseRule.advice
+            ).filter(
+                SymptomDiseaseRule.department == predicted_department
+            ).first() # Just pick one
+            
+            if fallback:
+                return {
+                    'name': fallback.disease_name,
+                    'count': 0,
+                    'department': fallback.department,
+                    'advice': fallback.advice,
+                    'source': 'department_fallback'
+                }
+                
+    except Exception as e:
+        print(f"Error matching disease: {e}")
+    return None
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_for_medical_ai_app'
@@ -274,7 +399,25 @@ def predict():
 
 def generate_report(context):
     symptoms = context.get('symptoms_text', '')
+    all_keywords = context.get('collected_keywords', [])
+    
+    # 1. AI Prediction (BERT)
     result = diagnose(symptoms)
+    
+    # 2. Rule-based Specific Disease Matching
+    suspected_case = match_suspected_disease(all_keywords, predicted_department=result['department'])
+    
+    suspected_html = ""
+    if suspected_case:
+        trigger_info = f"关键词：{', '.join(all_keywords)}" if suspected_case['source'] == 'keywords' else "基于症状类型推断"
+        suspected_html = f"""
+        <div class="alert alert-info mt-3">
+            <h6 class="alert-heading"><i class="fas fa-search-plus me-2"></i>疑似具体病例分析</h6>
+            <p class="mb-1">根据您的描述（{trigger_info}），系统分析疑似为：<strong>{suspected_case['name']}</strong></p>
+            <p class="mb-1"><strong>推荐科室：</strong>{suspected_case['department']}</p>
+            <p class="mb-0 small text-muted"><strong>建议：</strong>{suspected_case['advice']}</p>
+        </div>
+        """
 
     report = f"""
     <div class="card mt-3 border-success">
@@ -284,6 +427,7 @@ def generate_report(context):
         <div class="card-body">
             <h5 class="card-title text-success">初步诊断：{result['type_name']}</h5>
             <hr>
+            {suspected_html}
             <p class="card-text"><strong><i class="fas fa-notes-medical me-2"></i>综合症状描述：</strong><br>{symptoms}</p>
             <p class="card-text"><strong><i class="fas fa-hospital-user me-2"></i>推荐科室：</strong> {result['department']}</p>
             
@@ -307,68 +451,114 @@ def chat():
             'content': '您好！我是您的智能医疗助手。请告诉我您哪里不舒服，或者有什么症状？'
         }]
         session['chat_state'] = 'init'
-        session['chat_context'] = {}
+        session['chat_round'] = 0 # Round counter
+        session['chat_context'] = {
+            'collected_keywords': [] # Store all keywords found
+        }
     
     if request.method == 'POST':
         user_input = request.form.get('user_input', '').strip()
         if user_input:
             # Add user message
             session['chat_history'].append({'role': 'user', 'content': user_input})
+            
+            # --- Keyword Extraction Step ---
+            current_keywords = extract_keywords_from_rules(user_input)
+            context = session.get('chat_context', {})
+            # Merge new keywords (avoid duplicates)
+            existing_kws = set(context.get('collected_keywords', []))
+            for k in current_keywords:
+                existing_kws.add(k)
+            context['collected_keywords'] = list(existing_kws)
+            
+            # Increment round
+            current_round = session.get('chat_round', 0) + 1
+            session['chat_round'] = current_round
+            
             session.modified = True
             
             # Process logic
             state = session.get('chat_state', 'init')
-            context = session.get('chat_context', {})
             
             bot_reply = "抱歉，我没有理解，请再说一遍。"
             
-            if state == 'init':
-                # First diagnosis
-                result = diagnose(user_input)
-                prob = result['prob']
-                pred_type = result['type_id']
-                
-                # If prob is decent, or if specific keywords matched (which boosts prob)
-                if prob > 0.4: # Slightly lowered threshold
-                    session['chat_state'] = 'asking_details'
-                    context['type_id'] = pred_type
-                    context['symptoms_text'] = user_input
-                    context['question_idx'] = 0
-                    session['chat_context'] = context
-                    
-                    # Ask first question
-                    questions = FOLLOW_UP_QUESTIONS.get(pred_type, [])
-                    if questions:
-                        bot_reply = f"根据您的描述，初步推测可能与{result['type_name']}有关。为了更准确的判断，我想再多了解一些情况。{questions[0]}"
-                    else:
-                        # No questions, direct report
-                        session['chat_state'] = 'report'
-                        bot_reply = generate_report(context)
-                else:
-                    bot_reply = "抱歉，根据目前的描述，我还无法确定具体的问题方向。能否请您再详细描述一下症状？例如具体的疼痛部位、持续时间、诱发因素等。"
-            
-            elif state == 'asking_details':
-                type_id = context.get('type_id')
-                q_idx = context.get('question_idx', 0)
-                
-                # Store answer
-                context['symptoms_text'] += f"；{user_input}"
-                
-                # Move to next question
-                q_idx += 1
-                context['question_idx'] = q_idx
+            # Check if we reached round limit (5 rounds)
+            if current_round >= 5:
+                session['chat_state'] = 'report'
+                # Update context with full text for BERT diagnose
+                context['symptoms_text'] = context.get('symptoms_text', '') + f"；{user_input}"
                 session['chat_context'] = context
+                bot_reply = generate_report(context)
+            else:
+                if state == 'init':
+                    # First diagnosis
+                    result = diagnose(user_input)
+                    prob = result['prob']
+                    pred_type = result['type_id']
+                    
+                    # Try to find a dynamic question based on rules first
+                    rule_question, _ = get_next_question(context.get('collected_keywords', []))
+                    
+                    if rule_question:
+                        session['chat_state'] = 'asking_details'
+                        context['type_id'] = pred_type
+                        context['symptoms_text'] = user_input
+                        # Use special flag to indicate we are using dynamic rule questions
+                        context['use_dynamic_questions'] = True 
+                        session['chat_context'] = context
+                        bot_reply = f"根据您的描述，初步推测可能与{result['type_name']}有关。{rule_question}"
+                    
+                    elif prob > 0.4: 
+                        session['chat_state'] = 'asking_details'
+                        context['type_id'] = pred_type
+                        context['symptoms_text'] = user_input
+                        context['question_idx'] = 0
+                        context['use_dynamic_questions'] = False
+                        session['chat_context'] = context
+                        
+                        # Ask first question from legacy list
+                        questions = FOLLOW_UP_QUESTIONS.get(pred_type, [])
+                        if questions:
+                            bot_reply = f"根据您的描述，初步推测可能与{result['type_name']}有关。为了更准确的判断，我想再多了解一些情况。{questions[0]}"
+                        else:
+                            session['chat_state'] = 'report'
+                            bot_reply = generate_report(context)
+                    else:
+                        bot_reply = "抱歉，根据目前的描述，我还无法确定具体的问题方向。能否请您再详细描述一下症状？例如具体的疼痛部位、持续时间、诱发因素等。"
                 
-                questions = FOLLOW_UP_QUESTIONS.get(type_id, [])
-                if q_idx < len(questions):
-                    bot_reply = questions[q_idx]
-                else:
-                    # All questions asked
-                    session['chat_state'] = 'report'
-                    bot_reply = generate_report(context)
+                elif state == 'asking_details':
+                    # Store answer text
+                    context['symptoms_text'] += f"；{user_input}"
+                    
+                    if context.get('use_dynamic_questions'):
+                        # Generate next dynamic question
+                        rule_question, _ = get_next_question(context.get('collected_keywords', []))
+                        if rule_question:
+                            bot_reply = rule_question
+                        else:
+                            # No more questions or good match found
+                            session['chat_state'] = 'report'
+                            bot_reply = generate_report(context)
+                    else:
+                        # Legacy flow
+                        type_id = context.get('type_id')
+                        q_idx = context.get('question_idx', 0)
+                        
+                        # Move to next question
+                        q_idx += 1
+                        context['question_idx'] = q_idx
+                        session['chat_context'] = context
+                        
+                        questions = FOLLOW_UP_QUESTIONS.get(type_id, [])
+                        if q_idx < len(questions):
+                            bot_reply = questions[q_idx]
+                        else:
+                            # All questions asked (or round limit reached)
+                            session['chat_state'] = 'report'
+                            bot_reply = generate_report(context)
 
-            elif state == 'report':
-                 bot_reply = "我已经为您生成了报告。如果您有新的问题，请点击页面上方的“重新咨询”按钮。"
+                elif state == 'report':
+                     bot_reply = "我已经为您生成了报告。如果您有新的问题，请点击页面上方的“重新咨询”按钮。"
 
             session['chat_history'].append({'role': 'bot', 'content': bot_reply})
             session.modified = True
@@ -380,6 +570,7 @@ def reset_chat():
     session.pop('chat_history', None)
     session.pop('chat_state', None)
     session.pop('chat_context', None)
+    session.pop('chat_round', None)
     return redirect(url_for('chat'))
 
 if __name__ == '__main__':

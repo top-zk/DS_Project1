@@ -26,6 +26,18 @@ class UserInteraction(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     feedback = db.Column(db.String(50))  # 'correct', 'incorrect'
 
+class SymptomDiseaseRule(db.Model):
+    __tablename__ = 'symptom_disease_rules'
+    id = db.Column(db.Integer, primary_key=True)
+    keywords = db.Column(db.Text, nullable=False) # JSON list or comma-separated string of 5 keywords
+    disease_name = db.Column(db.String(200), nullable=False)
+    department = db.Column(db.String(100))
+    advice = db.Column(db.Text) # Treatment/Advice
+
+    @property
+    def keyword_list(self):
+        return self.keywords.split(',') if self.keywords else []
+
 class MedicalEncyclopedia(db.Model):
     __tablename__ = 'encyclopedia'
     id = db.Column(db.Integer, primary_key=True)
@@ -95,8 +107,7 @@ def init_encyclopedia_data():
     if MedicalEncyclopedia.query.first() is None:
         # Load from multiple sources
         sources = [
-            os.path.join(os.path.dirname(__file__), 'huank/DB_project/demo_output.json'), # High quality Chinese data
-            os.path.join(os.path.dirname(__file__), 'huank/DB_project/output/diseases.json') # Original data (mixed)
+            os.path.join(os.path.dirname(__file__), 'output/diseases.json') # Standard diseases.json
         ]
         
         # Load existing names to avoid duplicates (in case of partial load)
